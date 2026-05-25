@@ -1,0 +1,10 @@
+{
+  "name": "Kura 2.0",
+  "description": "A kitchen inventory tracking and waste prevention application. Track food expiration dates to eat expiring items first, formulate custom recipes, and record purchase details (where, when, and how much) to build a smart reference ledger.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

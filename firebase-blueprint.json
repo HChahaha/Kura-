@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "An item in the user's kitchen inventory",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "quantity": { "type": "string", "maxLength": 50 },
+        "category": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 50 },
+        "expiryDate": { "type": "string", "maxLength": 20 },
+        "daysLeft": { "type": "number" },
+        "image": { "type": "string", "maxLength": 500 },
+        "isExpiringSoon": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "name", "category", "createdAt"]
+    },
+    "ShoppingItem": {
+      "title": "ShoppingItem",
+      "description": "Shopping list item",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 50 },
+        "checked": { "type": "boolean" },
+        "price": { "type": "string", "maxLength": 50 },
+        "storeName": { "type": "string", "maxLength": 100 },
+        "purchaseDate": { "type": "string", "maxLength": 20 },
+        "quantityBought": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "name", "category", "checked", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/inventory/{itemId}": {
+      "schema": { "$ref": "#/entities/InventoryItem" },
+      "description": "Inventory items for a user"
+    },
+    "users/{userId}/shopping/{itemId}": {
+      "schema": { "$ref": "#/entities/ShoppingItem" },
+      "description": "Shopping items for a user"
+    }
+  }
+}

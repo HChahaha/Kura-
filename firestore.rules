@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    
+    // Validation Helpers
+    function isValidInventoryItem(data) {
+      return data.keys().hasAll(['userId', 'name', 'category', 'createdAt']) &&
+             data.keys().size() <= 11 &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.category is string && data.category.size() <= 50 &&
+             (data.get('quantity', '') is string && data.get('quantity', '').size() <= 50) &&
+             (data.get('location', '') is string && data.get('location', '').size() <= 50) &&
+             (data.get('expiryDate', '') is string && data.get('expiryDate', '').size() <= 20) &&
+             (data.get('image', '') is string && data.get('image', '').size() <= 500) &&
+             (data.get('daysLeft', 0) is number) &&
+             (data.get('isExpiringSoon', false) is bool) &&
+             data.createdAt == request.time;
+    }
+
+    function isValidShoppingItem(data) {
+      return data.keys().hasAll(['userId', 'name', 'category', 'checked', 'createdAt']) &&
+             data.keys().size() <= 10 &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.checked is bool &&
+             (data.get('price', '') is string && data.get('price', '').size() <= 50) &&
+             (data.get('storeName', '') is string && data.get('storeName', '').size() <= 100) &&
+             (data.get('purchaseDate', '') is string && data.get('purchaseDate', '').size() <= 20) &&
+             (data.get('quantityBought', '') is string && data.get('quantityBought', '').size() <= 50) &&
+             data.createdAt == request.time;
+    }
+
+    function isValidPurchaseRecord(data) {
+      return data.keys().hasAll(['userId', 'name', 'category', 'createdAt']) &&
+             data.keys().size() <= 10 &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.category is string && data.category.size() <= 50 &&
+             (data.get('price', '') is string && data.get('price', '').size() <= 50) &&
+             (data.get('storeName', '') is string && data.get('storeName', '').size() <= 100) &&
+             (data.get('purchaseDate', '') is string && data.get('purchaseDate', '').size() <= 20) &&
+             (data.get('quantityBought', '') is string && data.get('quantityBought', '').size() <= 50) &&
+             data.createdAt == request.time;
+    }
+
+    match /users/{userId}/inventory/{itemId} {
+      allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidInventoryItem(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && 
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt == request.time &&
+                       (!incoming().keys().hasAny(['userId', 'createdAt']) || (incoming().userId == existing().userId && incoming().createdAt == existing().createdAt));
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/shopping/{itemId} {
+      allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidShoppingItem(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && 
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt == request.time &&
+                       (!incoming().keys().hasAny(['userId', 'createdAt']) || (incoming().userId == existing().userId && incoming().createdAt == existing().createdAt));
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/purchaseHistory/{itemId} {
+      allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidPurchaseRecord(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && 
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt == request.time &&
+                       (!incoming().keys().hasAny(['userId', 'createdAt']) || (incoming().userId == existing().userId && incoming().createdAt == existing().createdAt));
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/recipes/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+  }
+}

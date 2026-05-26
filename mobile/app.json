@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Kura",
+    "slug": "kura-kitchen",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need access to your camera to photograph recipes and ingredients",
+        "NSPhotoLibraryUsageDescription": "We need access to your photos for recipe images"
+      }
+    },
+    "android": {
+      "package": "com.kura.kitchen",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Kura to access your camera"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Kura to access your photos",
+          "savePhotosPermission": "Allow Kura to save photos"
+        }
+      ],
+      "expo-sqlite"
+    ]
+  }
+}

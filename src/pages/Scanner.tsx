@@ -27,7 +27,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
-  const [isScanning, setIsScanning] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
   const [editingItem, setEditingItem] = useState<DetectedItem | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
 
@@ -58,29 +58,10 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
     startCamera();
 
-    // Initial simulation of detection
-    const timer = setTimeout(() => {
-      const initialItems = [
-        { id: 'd1', name: 'Organic Milk', price: '$4.50', category: 'Dairy & Eggs', quantity: '1.0L', expiryDate: '' },
-        { id: 'd2', name: 'Baby Spinach', price: '$3.25', category: 'Vegetables', quantity: '200g', expiryDate: '' },
-        { id: 'd3', name: 'Salmon Fillet', price: '$12.00', category: 'Meat & Seafood', quantity: '350g', expiryDate: '' },
-        { id: 'd4', name: 'Eggs', price: '$5.50', category: 'Dairy & Eggs', quantity: '12 qty', expiryDate: '' }
-      ].map(item => {
-        const shelfLife = FOOD_SHELF_LIFE[item.name] || 7;
-        return {
-          ...item,
-          expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd')
-        };
-      });
-      setDetectedItems(initialItems);
-      setIsScanning(false);
-    }, 4500);
-
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      clearTimeout(timer);
     };
   }, []);
 
@@ -95,12 +76,24 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Simulate "processing" the uploaded image
       setIsScanning(true);
+      setDetectedItems([]);
       setTimeout(() => {
+        const mockItems = [
+          { id: 'd1', name: 'Organic Milk', price: '$4.50', category: 'Dairy & Eggs', quantity: '1.0L', expiryDate: '' },
+          { id: 'd2', name: 'Baby Spinach', price: '$3.25', category: 'Vegetables', quantity: '200g', expiryDate: '' },
+          { id: 'd3', name: 'Salmon Fillet', price: '$12.00', category: 'Meat & Seafood', quantity: '350g', expiryDate: '' },
+          { id: 'd4', name: 'Eggs', price: '$5.50', category: 'Dairy & Eggs', quantity: '12 qty', expiryDate: '' }
+        ].map(item => {
+          const shelfLife = FOOD_SHELF_LIFE[item.name] || 7;
+          return {
+            ...item,
+            expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd')
+          };
+        });
+        setDetectedItems(mockItems);
         setIsScanning(false);
-        // Maybe add some more items or just keep the simulated ones
-      }, 2000);
+      }, 2500);
     }
   };
 
@@ -253,7 +246,33 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
             </div>
           </motion.div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 mt-4">
+            {isReady && !isScanning && detectedItems.length === 0 && (
+              <button 
+                onClick={() => {
+                   setIsScanning(true);
+                   setTimeout(() => {
+                     const mockItems = [
+                       { id: 'd1', name: 'Organic Milk', price: '$4.50', category: 'Dairy & Eggs', quantity: '1.0L', expiryDate: '' },
+                       { id: 'd2', name: 'Baby Spinach', price: '$3.25', category: 'Vegetables', quantity: '200g', expiryDate: '' },
+                       { id: 'd3', name: 'Salmon Fillet', price: '$12.00', category: 'Meat & Seafood', quantity: '350g', expiryDate: '' },
+                       { id: 'd4', name: 'Eggs', price: '$5.50', category: 'Dairy & Eggs', quantity: '12 qty', expiryDate: '' }
+                     ].map(item => {
+                       const shelfLife = FOOD_SHELF_LIFE[item.name] || 7;
+                       return {
+                         ...item,
+                         expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd')
+                       };
+                     });
+                     setDetectedItems(mockItems);
+                     setIsScanning(false);
+                   }, 2500);
+                }}
+                className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-2xl font-bold uppercase tracking-[0.1em] text-[10px] transition-all border border-white/20 mb-3"
+              >
+                Scan Receipt
+              </button>
+            )}
             <button 
               onClick={handleFinish}
               disabled={isScanning || detectedItems.length === 0}

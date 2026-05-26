@@ -139,6 +139,20 @@ export function getFoodImage(name: string, category?: string): string {
   return `https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600&food=${encodeURIComponent(name)}`;
 }
 
+export function getRandomFoodImage(): string {
+  const fallbacks = [
+    '1498837167922-2615df8f5d09',
+    '1504674900247-0877df9cc836',
+    '1473093295043-cdd812d0e601',
+    '1556910103-1c02745aae4d',
+    '1484723091786-83d9cce9e662',
+    '1512621776951-a57141f2eefd',
+    '1466637574686-902d58f19277',
+    '1542838132-92c53300491e'
+  ];
+  return `https://images.unsplash.com/photo-${fallbacks[Math.floor(Math.random() * fallbacks.length)]}?auto=format&fit=crop&q=80&w=600`;
+}
+
 export function getNormalShelfLife(name: string, category?: string): number {
   const lowercaseName = name.toLowerCase();
   

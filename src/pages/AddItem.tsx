@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, ChevronDown, Leaf, Plus, Check, Sparkles, RotateCcw, Upload } from 'lucide-react';
 import { CustomCalendar } from '../components/CustomCalendar';
 import { View, InventoryItem } from '../types';
-import { getFoodImage, suggestCategory, getNormalShelfLife } from '../lib/imageUtils';
+import { getFoodImage, suggestCategory, getNormalShelfLife, getRandomFoodImage } from '../lib/imageUtils';
 
 interface AddItemProps {
   onViewChange: (view: View) => void;
@@ -73,7 +73,7 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
   };
 
   const handleRefreshImage = () => {
-    setImage(getFoodImage(name, category));
+    setImage(getRandomFoodImage());
   };
 
   return (

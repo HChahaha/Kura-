@@ -312,11 +312,23 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
             >
               <div className="p-8">
                 <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-2xl font-light text-ink-black mb-1">{editingItem.name}</h3>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Adjust details before adding</p>
+                  <div className="w-full mr-4">
+                    <input 
+                      type="text"
+                      value={editingItem.name}
+                      onChange={(e) => {
+                        const newName = e.target.value;
+                        setEditingItem({ ...editingItem, name: newName });
+                        setDetectedItems(prev => prev.map(item => 
+                          item.id === editingItem.id ? { ...item, name: newName } : item
+                        ));
+                      }}
+                      className="text-2xl font-light text-ink-black mb-1 w-full bg-transparent border-b border-transparent hover:border-zinc-200 focus:border-ink-black focus:outline-none transition-colors px-0 pb-1"
+                      placeholder="Product Name"
+                    />
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Adjust details before adding</p>
                   </div>
-                  <button onClick={() => setEditingItem(null)} className="p-2 hover:bg-zinc-50 rounded-full">
+                  <button onClick={() => setEditingItem(null)} className="p-2 hover:bg-zinc-50 rounded-full shrink-0">
                     <X className="w-5 h-5 text-zinc-400" />
                   </button>
                 </div>

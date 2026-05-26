@@ -103,15 +103,8 @@ export default function ShoppingList({
         <div className="flex justify-end gap-2">
           <button 
             type="button" 
-            onClick={() => setEditingHistoryItem(record)} 
-            className="text-zinc-400 hover:text-ink-black transition-colors"
-            title="Edit"
-          >
-            <span className="text-xs uppercase font-bold tracking-wider">Edit</span>
-          </button>
-          <button 
-            type="button" 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if(window.confirm('Delete this record?')) {
                 onDeletePurchaseRecord?.(record.id);
               }
@@ -559,8 +552,14 @@ export default function ShoppingList({
             >
               <div className="p-6 md:p-8 space-y-6">
                 <header>
-                  <h3 className="text-xl font-light text-ink-black mb-1">Edit Purchase Log</h3>
-                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">{editingHistoryItem.name}</p>
+                  <h3 className="text-[17px] font-light text-ink-black mb-1">Edit Purchase Log</h3>
+                  <input 
+                    type="text"
+                    value={editingHistoryItem.name}
+                    onChange={(e) => setEditingHistoryItem({...editingHistoryItem, name: e.target.value})}
+                    className="w-full text-[21px] font-bold leading-[14px] text-zinc-500 uppercase tracking-widest bg-transparent border-b border-transparent hover:border-zinc-200 focus:border-zinc-300 focus:outline-none transition-colors px-0 pb-1"
+                    placeholder="Product Name"
+                  />
                 </header>
                 
                 <div className="space-y-4">
@@ -686,7 +685,11 @@ export default function ShoppingList({
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {filteredHistory.map(record => (
-                  <tr key={record.id} className="hover:bg-zinc-50/55 transition-colors">
+                  <tr 
+                    key={record.id} 
+                    className="hover:bg-zinc-50/55 transition-colors cursor-pointer"
+                    onClick={() => setEditingHistoryItem(record)}
+                  >
                     {columnOrder.map(col => (
                       <td key={`${record.id}-${col}`} className={`py-3.5 px-4 ${columnDefinitions[col].cellClasses || ''}`}>
                         {columnDefinitions[col].renderCell(record)}

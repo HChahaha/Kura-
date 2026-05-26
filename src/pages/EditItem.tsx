@@ -52,7 +52,7 @@ export default function EditItem({ item, onViewChange, onUpdateItem, onDeleteIte
     if (item) {
       setName(item.name);
       // Try to split quantity into value and unit
-      const match = item.quantity.match(/^([0-9.]+)([a-zA-Z]+)$/);
+      const match = item.quantity.match(/^([0-9.]+)\s*([a-zA-Z]+)$/);
       if (match) {
         setQuantityValue(match[1]);
         setUnit(match[2]);

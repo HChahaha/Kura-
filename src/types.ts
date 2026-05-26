@@ -62,4 +62,4 @@ export interface PurchaseRecord {
   updatedAt?: any;
 }
 
-export type View = 'inventory' | 'shopping' | 'recipes' | 'scanner' | 'add-item' | 'edit-item' | 'recipe-detail' | 'add-recipe' | 'settings' | 'auth';
+export type View = 'inventory' | 'shopping' | 'recipes' | 'scanner' | 'add-item' | 'edit-item' | 'recipe-detail' | 'add-recipe' | 'edit-recipe' | 'settings' | 'auth';

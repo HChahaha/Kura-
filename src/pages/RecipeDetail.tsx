@@ -15,6 +15,7 @@ interface RecipeDetailProps {
   customRecipes: any[];
   savedRecipeIds?: string[];
   onToggleSaveRecipe?: (id: string) => void;
+  onEditRecipe?: (id: string) => void;
 }
 
 export default function RecipeDetail({ 
@@ -26,7 +27,8 @@ export default function RecipeDetail({
   onUpdateInventory, 
   customRecipes,
   savedRecipeIds = [],
-  onToggleSaveRecipe
+  onToggleSaveRecipe,
+  onEditRecipe
 }: RecipeDetailProps) {
   const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
   const [cookingMode, setCookingMode] = useState(false);
@@ -227,7 +229,16 @@ export default function RecipeDetail({
             </div>
           )}
           
-          {onToggleSaveRecipe && (
+          {recipe.isUserCreated && onEditRecipe && (
+            <button 
+              onClick={() => onEditRecipe(recipe.id)}
+              className="w-16 h-8 rounded-full flex items-center justify-center bg-white/40 hover:bg-white border border-zinc-100 shadow-sm text-zinc-400 hover:text-ink-black transition-all active:scale-95 text-[10px] uppercase font-bold tracking-widest"
+            >
+              Edit
+            </button>
+          )}
+
+          {onToggleSaveRecipe && !recipe.isUserCreated && (
             <button 
               onClick={() => onToggleSaveRecipe(recipe.id)}
               className="w-8 h-8 rounded-full flex items-center justify-center bg-white/40 hover:bg-white border border-zinc-100 shadow-sm text-zinc-400 hover:text-red-500 transition-all active:scale-95"

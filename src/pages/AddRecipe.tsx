@@ -6,23 +6,31 @@ import { View } from '../types';
 interface AddRecipeProps {
   onViewChange: (view: View) => void;
   onSaveRecipe: (recipe: any) => void;
+  recipeToEdit?: any;
 }
 
-export default function AddRecipe({ onViewChange, onSaveRecipe }: AddRecipeProps) {
-  const [name, setName] = useState('');
-  const [image, setImage] = useState<string | null>(null);
-  const [description, setDescription] = useState('');
-  const [ingredients, setIngredients] = useState<{ id: string; name: string; quantity: string }[]>([
-    { id: '1', name: '', quantity: '' }
-  ]);
-  const [steps, setSteps] = useState([{ id: '1', text: '' }]);
-  const [prepTime, setPrepTime] = useState('20');
-  const [calories, setCalories] = useState('450');
-  const [servings, setServings] = useState('2');
-  const [difficulty, setDifficulty] = useState('Easy');
-  const [protein, setProtein] = useState('20g');
-  const [fat, setFat] = useState('10g');
-  const [carbs, setCarbs] = useState('40g');
+export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: AddRecipeProps) {
+  const [name, setName] = useState(recipeToEdit?.name || '');
+  const [image, setImage] = useState<string | null>(recipeToEdit?.image || null);
+  const [description, setDescription] = useState(recipeToEdit?.description || '');
+  
+  const initialIngredients = recipeToEdit?.fullIngredients?.length 
+    ? recipeToEdit.fullIngredients.map((i: any) => ({ ...i, id: Math.random().toString(36).substring(7) }))
+    : [{ id: '1', name: '', quantity: '' }];
+  const [ingredients, setIngredients] = useState<{ id: string; name: string; quantity: string }[]>(initialIngredients);
+  
+  const initialSteps = recipeToEdit?.instructions?.length
+    ? recipeToEdit.instructions.map((text: string) => ({ id: Math.random().toString(36).substring(7), text }))
+    : [{ id: '1', text: '' }];
+  const [steps, setSteps] = useState(initialSteps);
+  
+  const [prepTime, setPrepTime] = useState(recipeToEdit?.time?.replace(/\D/g, '') || '20');
+  const [calories, setCalories] = useState(recipeToEdit?.calories?.toString() || '450');
+  const [servings, setServings] = useState(recipeToEdit?.servings || '2');
+  const [difficulty, setDifficulty] = useState(recipeToEdit?.difficulty || 'Easy');
+  const [protein, setProtein] = useState(recipeToEdit?.protein || '20g');
+  const [fat, setFat] = useState(recipeToEdit?.fat || '10g');
+  const [carbs, setCarbs] = useState(recipeToEdit?.carbs || '40g');
 
   const addIngredient = () => {
     setIngredients(prev => [...prev, { id: Math.random().toString(36).substring(7), name: '', quantity: '' }]);
@@ -52,7 +60,7 @@ export default function AddRecipe({ onViewChange, onSaveRecipe }: AddRecipeProps
     const finalName = name.trim() || `Untitled Creation ${new Date().toLocaleDateString()}`;
     
     onSaveRecipe({
-      id: Math.random().toString(36).substring(7),
+      id: recipeToEdit?.id || Math.random().toString(36).substring(7),
       name: finalName,
       image: image || "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=800",
       description: description || "A personal culinary record.",
@@ -84,14 +92,14 @@ export default function AddRecipe({ onViewChange, onSaveRecipe }: AddRecipeProps
           </button>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-300 block mb-0.5">Scrapbook</span>
-            <h1 className="text-xl font-light text-ink-black">New Creation</h1>
+            <h1 className="text-xl font-light text-ink-black">{recipeToEdit ? 'Edit Creation' : 'New Creation'}</h1>
           </div>
         </div>
         <button 
           onClick={handleSave}
           className="text-[10px] font-bold uppercase tracking-[0.3em] text-bamboo-green hover:opacity-70 transition-all px-4 py-2 bg-bamboo-green/5 rounded-full"
         >
-          Publish
+          {recipeToEdit ? 'Save Changes' : 'Publish'}
         </button>
       </header>
 
@@ -318,9 +326,9 @@ export default function AddRecipe({ onViewChange, onSaveRecipe }: AddRecipeProps
           onClick={handleSave}
           className="w-full h-16 bg-ink-black text-white rounded-full flex items-center justify-center gap-4 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all group"
         >
-          <div className="flex flex-col items-start">
+           <div className="flex flex-col items-start">
              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50 leading-none mb-1">Scrapbook</span>
-             <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-white">Publish Record</span>
+             <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-white">{recipeToEdit ? 'Save Updates' : 'Publish Record'}</span>
           </div>
           <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-bamboo-green transition-colors">
             <Sparkles className="w-5 h-5 text-bamboo-green group-hover:text-white transition-colors" />

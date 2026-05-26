@@ -119,8 +119,9 @@ export default function App() {
   };
   const [customRecipes, setCustomRecipes] = useState<any[]>([]);
   const [lastAddedIngredient, setLastAddedIngredient] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>(['Dairy & Eggs', 'Vegetables', 'Meat & Seafood', 'Pantry', 'Grains', 'Fruits', 'Bakery', 'Frozen']);
+  const [categories, setCategories] = useState<string[]>(['Dairy & Eggs', 'Vegetables', 'Meat & Seafood', 'Pantry', 'Grains', 'Fruits', 'Bakery', 'Frozen', 'Household']);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -530,12 +531,19 @@ export default function App() {
             customRecipes={customRecipes}
             savedRecipeIds={savedRecipeIds}
             onToggleSaveRecipe={handleToggleSaveRecipe}
+            onEditRecipe={() => {
+              setEditingRecipeId(selectedRecipeId);
+              setCurrentView('edit-recipe');
+            }}
           />
         );
       case 'add-recipe':
+      case 'edit-recipe':
+        const recipeToEdit = currentView === 'edit-recipe' ? customRecipes.find(r => r.id === editingRecipeId) : undefined;
         return (
           <AddRecipe 
             onViewChange={setCurrentView} 
+            recipeToEdit={recipeToEdit}
             onSaveRecipe={async (r) => {
               if (!user) return;
               
@@ -548,8 +556,10 @@ export default function App() {
               
               try {
                 await setDoc(doc(db, `users/${user.uid}/recipes`, r.id), recipeData);
-                setSavedRecipeIds(prev => [...prev, r.id]); // Auto-save own recipes
-                triggerNotification('Recipe published to scrapbook');
+                if (!recipeToEdit) {
+                  setSavedRecipeIds(prev => [...prev, r.id]); // Auto-save own recipes
+                }
+                triggerNotification(recipeToEdit ? 'Recipe updated' : 'Recipe published to scrapbook');
                 setCurrentView('recipes');
               } catch (err) {
                 console.error('Error saving recipe:', err);

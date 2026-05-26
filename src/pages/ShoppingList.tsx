@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
 import { getNormalShelfLife } from '../lib/imageUtils';
 
@@ -17,6 +17,8 @@ interface ShoppingListProps {
   onAddToInventory: (item: Omit<InventoryItem, 'id' | 'daysLeft' | 'isExpiringSoon'>) => void;
   onViewChange: (view: View) => void;
 }
+
+const UNITS = ['g', 'kg', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
 
 export default function ShoppingList({
   shoppingList,
@@ -41,7 +43,9 @@ export default function ShoppingList({
   const [storeName, setStoreName] = useState('');
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [price, setPrice] = useState('');
-  const [quantityBought, setQuantityBought] = useState('1 unit');
+  const [quantityBought, setQuantityBought] = useState('1');
+  const [unitBought, setUnitBought] = useState('pcs');
+  const [isUnitOpen, setIsUnitOpen] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
   const [autoAddInventory, setAutoAddInventory] = useState(true);
 
@@ -188,37 +192,54 @@ export default function ShoppingList({
     // Autofill with some logical default or clear
     setStoreName('');
     setPrice('');
-    setQuantityBought('1 unit');
+    setQuantityBought('1');
+    setUnitBought('pcs');
+    setIsUnitOpen(false);
     setExpiryDate('');
+    setAutoAddInventory(item.category !== 'Household');
+  };
+
+  const startDirectPurchase = () => {
+    setActiveCompletingItem({ id: 'direct-purchase', name: '', category: 'Household', checked: false });
+    setStoreName('');
+    setPrice('');
+    setQuantityBought('1');
+    setUnitBought('pcs');
+    setIsUnitOpen(false);
+    setExpiryDate('');
+    setAutoAddInventory(false);
   };
 
   const submitPurchaseDetails = () => {
     if (!activeCompletingItem) return;
+    if (activeCompletingItem.id === 'direct-purchase' && !activeCompletingItem.name.trim()) return;
 
     const record: PurchaseRecord = {
       id: Math.random().toString(36).substring(7),
-      name: activeCompletingItem.name,
+      name: activeCompletingItem.name.trim(),
       category: activeCompletingItem.category,
       price: price.trim() ? (price.startsWith('$') ? price.trim() : `$${price.trim()}`) : 'Unspecified',
       storeName: storeName.trim() || 'Unspecified Store',
       purchaseDate: purchaseDate,
-      quantityBought: quantityBought.trim() || '1 unit'
+      quantityBought: `${quantityBought.trim() || '1'}${unitBought}`
     };
 
     // 1. Add purchase reference record
     onAddPurchaseRecord(record);
 
     // 2. Mark shopping item as checked
-    onUpdateShoppingItem(activeCompletingItem.id, { 
-      checked: true, 
-      storeName: record.storeName, 
-      price: record.price, 
-      purchaseDate: record.purchaseDate, 
-      quantityBought: record.quantityBought 
-    });
+    if (activeCompletingItem.id !== 'direct-purchase') {
+      onUpdateShoppingItem(activeCompletingItem.id, { 
+        checked: true, 
+        storeName: record.storeName, 
+        price: record.price, 
+        purchaseDate: record.purchaseDate, 
+        quantityBought: record.quantityBought 
+      });
+    }
 
     // 3. Option to auto-add to active kitchen inventory
-    if (autoAddInventory) {
+    if (autoAddInventory && activeCompletingItem.category !== 'Household') {
       onAddToInventory({
         name: activeCompletingItem.name,
         category: activeCompletingItem.category,
@@ -348,7 +369,9 @@ export default function ShoppingList({
               <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-bamboo-green" />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-ink-black">Log Purchase: {activeCompletingItem.name}</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-ink-black">
+                    {activeCompletingItem.id === 'direct-purchase' ? 'Log Direct Purchase' : `Log Purchase: ${activeCompletingItem.name}`}
+                  </h3>
                 </div>
                 <button 
                   onClick={() => setActiveCompletingItem(null)}
@@ -359,8 +382,42 @@ export default function ShoppingList({
               </div>
 
               <div className="p-6 space-y-6 overflow-y-auto">
+                {activeCompletingItem.id === 'direct-purchase' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left">
+                        Item Name
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Toilet Paper"
+                        value={activeCompletingItem.name}
+                        onChange={(e) => setActiveCompletingItem({...activeCompletingItem, name: e.target.value})}
+                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left">
+                        Category
+                      </label>
+                      <select 
+                        value={activeCompletingItem.category}
+                        onChange={(e) => {
+                          const cat = e.target.value;
+                          setActiveCompletingItem({...activeCompletingItem, category: cat});
+                          setAutoAddInventory(cat !== 'Household');
+                        }}
+                        className="w-full px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-300"
+                      >
+                        {categories.filter(c => c !== 'All Items').map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 flex items-center gap-1.5">
+                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left flex items-center gap-1.5">
                     <Store className="w-3 h-3 text-zinc-400" /> WHERE (Store Name)
                   </label>
                   <input 
@@ -387,15 +444,45 @@ export default function ShoppingList({
                   </div>
                   <div>
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 flex items-center gap-1.5">
-                      <Archive className="w-3 h-3 text-zinc-400" /> Quantity Bought
+                      <Archive className="w-3 h-3 text-zinc-400" /> Quantity
                     </label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g., 2 packs, 1.0L"
-                      value={quantityBought}
-                      onChange={(e) => setQuantityBought(e.target.value)}
-                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
-                    />
+                    <div className="flex bg-zinc-50 border border-zinc-200 rounded-[12px] overflow-visible focus-within:bg-white focus-within:border-zinc-400 transition-all relative">
+                      <input 
+                        type="number" 
+                        value={quantityBought}
+                        onChange={(e) => setQuantityBought(e.target.value)}
+                        className="w-full border-0 bg-transparent px-4 py-3 text-sm focus:ring-0 font-medium text-ink-black focus:outline-none" 
+                      />
+                      <div 
+                        className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-200 relative"
+                        onClick={() => setIsUnitOpen(!isUnitOpen)}
+                      >
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unitBought}</span>
+                        <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
+                        
+                        <AnimatePresence>
+                          {isUnitOpen && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
+                            >
+                              {UNITS.map(u => (
+                                <button 
+                                  key={u}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setUnitBought(u); setIsUnitOpen(false); }}
+                                  className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
+                                >
+                                  {u}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -420,7 +507,7 @@ export default function ShoppingList({
                     className="w-4 h-4 rounded border-zinc-300 text-bamboo-green focus:ring-bamboo-green cursor-pointer"
                   />
                   <label htmlFor="auto-add-inv" className="text-xs text-zinc-500 font-medium cursor-pointer select-none">
-                     Automatically restock to active inventory list
+                     Add to active food inventory (uncheck for daily necessities)
                   </label>
                 </div>
 
@@ -547,7 +634,16 @@ export default function ShoppingList({
         <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1">REFERENCE INDEX</h3>
-            <h2 className="text-xl font-light text-ink-black">Purchase History & Prices</h2>
+            <h2 className="text-xl font-light text-ink-black flex items-center gap-3">
+              Purchase History & Prices
+              <button 
+                onClick={startDirectPurchase}
+                className="w-8 h-8 rounded-full bg-white border border-zinc-200 text-ink-black shadow-sm flex items-center justify-center hover:bg-zinc-50 transition-colors"
+                title="Log a purchase directly"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </h2>
           </div>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />

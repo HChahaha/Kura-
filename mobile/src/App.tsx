@@ -4,10 +4,12 @@ import { createNativeStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { initializeNotifications } from '@/services/notificationService';
 import { initializeOfflineDB } from '@/services/offlineService';
+import { initializeScheduledTasks } from '@/services/notificationScheduler';
 import HomeScreen from '@/screens/HomeScreen';
 import PantryScreen from '@/screens/PantryScreen';
 import RecipesScreen from '@/screens/RecipesScreen';
 import ShoppingListScreen from '@/screens/ShoppingListScreen';
+import CameraScreen from '@/screens/CameraScreen';
 import { Ionicons } from '@expo/vector-icons';
 
 const Stack = createNativeStackNavigator();
@@ -17,6 +19,14 @@ function PantryStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="PantryList" component={PantryScreen} />
+      <Stack.Screen
+        name="CameraCapture"
+        component={CameraScreen}
+        options={{
+          presentation: 'modal',
+          headerShown: false,
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -25,6 +35,14 @@ function RecipesStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="RecipesList" component={RecipesScreen} />
+      <Stack.Screen
+        name="CameraCapture"
+        component={CameraScreen}
+        options={{
+          presentation: 'modal',
+          headerShown: false,
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -39,10 +57,16 @@ function ShoppingStack() {
 
 export default function App() {
   useEffect(() => {
-    // Initialize offline database
-    initializeOfflineDB();
-    // Initialize push notifications
-    initializeNotifications();
+    const initializeApp = async () => {
+      // Initialize offline database
+      await initializeOfflineDB();
+      // Initialize push notifications
+      await initializeNotifications();
+      // Initialize scheduled notification tasks
+      await initializeScheduledTasks();
+    };
+
+    initializeApp();
   }, []);
 
   return (

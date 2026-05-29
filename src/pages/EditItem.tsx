@@ -14,7 +14,7 @@ interface EditItemProps {
   onAddCategory: (category: string) => void;
 }
 
-const UNITS = ['g', 'kg', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
+const UNITS = ['g', 'kg', 'lbs', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
 
 export default function EditItem({ item, onViewChange, onUpdateItem, onDeleteItem, categories, onAddCategory }: EditItemProps) {
   const [name, setName] = useState(item?.name || '');

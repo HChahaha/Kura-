@@ -18,7 +18,7 @@ interface ShoppingListProps {
   onViewChange: (view: View) => void;
 }
 
-const UNITS = ['g', 'kg', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
+const UNITS = ['g', 'kg', 'lbs', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
 
 export default function ShoppingList({
   shoppingList,
@@ -205,7 +205,7 @@ export default function ShoppingList({
 
   const submitPurchaseDetails = () => {
     if (!activeCompletingItem) return;
-    if (activeCompletingItem.id === 'direct-purchase' && !activeCompletingItem.name.trim()) return;
+    if (!activeCompletingItem.name.trim()) return;
 
     const record: PurchaseRecord = {
       id: Math.random().toString(36).substring(7),
@@ -359,56 +359,51 @@ export default function ShoppingList({
               exit={{ y: '100%', opacity: 0 }}
               className="bg-white w-full max-w-md rounded-t-[28px] sm:rounded-[20px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-bamboo-green" />
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-ink-black">
-                    {activeCompletingItem.id === 'direct-purchase' ? 'Log Direct Purchase' : `Log Purchase: ${activeCompletingItem.name}`}
-                  </h3>
+              <div className="p-6 border-b border-zinc-100 flex justify-between items-start bg-zinc-50">
+                <div className="w-full mr-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2 h-2 rounded-full bg-bamboo-green" />
+                    <span className="text-xs font-bold uppercase tracking-widest text-ink-black">
+                      {activeCompletingItem.id === 'direct-purchase' ? 'Log Direct Purchase' : 'Log Purchase'}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={activeCompletingItem.name}
+                    onChange={(e) => setActiveCompletingItem({...activeCompletingItem, name: e.target.value})}
+                    className="w-full text-lg font-bold text-zinc-600 bg-transparent border-b border-transparent hover:border-zinc-200 focus:border-zinc-300 focus:outline-none transition-colors px-0 pb-1"
+                    placeholder="Product Name"
+                  />
                 </div>
                 <button 
                   onClick={() => setActiveCompletingItem(null)}
-                  className="p-1.5 text-zinc-400 hover:text-ink-black transition-colors"
+                  className="p-1.5 text-zinc-400 hover:text-ink-black transition-colors shrink-0"
                 >
                   <Plus className="w-5 h-5 rotate-45" />
                 </button>
               </div>
 
               <div className="p-6 space-y-6 overflow-y-auto">
-                {activeCompletingItem.id === 'direct-purchase' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left">
-                        Item Name
-                      </label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Toilet Paper"
-                        value={activeCompletingItem.name}
-                        onChange={(e) => setActiveCompletingItem({...activeCompletingItem, name: e.target.value})}
-                        className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left">
-                        Category
-                      </label>
-                      <select 
-                        value={activeCompletingItem.category}
-                        onChange={(e) => {
-                          const cat = e.target.value;
-                          setActiveCompletingItem({...activeCompletingItem, category: cat});
-                          setAutoAddInventory(cat !== 'Household');
-                        }}
-                        className="w-full px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-300"
-                      >
-                        {categories.filter(c => c !== 'All Items').map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left">
+                      Category
+                    </label>
+                    <select 
+                      value={activeCompletingItem.category}
+                      onChange={(e) => {
+                        const cat = e.target.value;
+                        setActiveCompletingItem({...activeCompletingItem, category: cat});
+                        setAutoAddInventory(cat !== 'Household');
+                      }}
+                      className="w-full px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-300"
+                    >
+                      {categories.filter(c => c !== 'All Items').map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
-                )}
+                </div>
                 <div>
                   <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 text-left flex items-center gap-1.5">
                     <Store className="w-3 h-3 text-zinc-400" /> WHERE (Store Name)

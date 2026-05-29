@@ -1,20 +1,10 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Kura 2.0 — Smart Kitchen Inventory & Shopping Manager
 
-# Run and deploy your AI Studio app
+### 💡 The Purpose
+Designed to eliminate the everyday frustration of forgetting what's in your fridge and letting food go to waste. **Kura 2.0** is a practical utility web app that helps you seamlessly log kitchen stock, track expiry dates, manage shopping lists, and keep an eye on grocery expenses.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/114c5805-3848-449c-8348-f2a611d5079b
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 🛠️ 4 Core Features
+1. **Food Inventory Logging**: Effortlessly record and track what ingredients you currently have in your fridge and pantry.
+2. **Expiration Reminders**: Automatically monitor shelf life and alert you before your food expires to minimize kitchen waste.
+3. **Personal Recipe Book**: Create, save, and manage your very own custom cooking recipes and preparation steps.
+4. **To-Buy List & Price Tracker**: Maintain a dynamic shopping list for your next grocery run, with built-in price logging to keep your budget on track.

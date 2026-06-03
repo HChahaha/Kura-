@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, Clock, Plus, Trash2, Check, CheckCircle2, Search, ArrowRight, BookOpen, Smile, Info } from 'lucide-react';
+import { AlertTriangle, Clock, Plus, Trash2, Check, CheckCircle2, Search, ArrowRight, BookOpen, Smile, Info, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags } from 'lucide-react';
 import { InventoryItem, View } from '../types';
 
 interface InventoryProps {
@@ -10,6 +10,20 @@ interface InventoryProps {
   onViewChange: (view: View) => void;
   onUpdateInventory: (items: InventoryItem[]) => void;
 }
+
+const getCategoryIcon = (category: string) => {
+  const c = category.toLowerCase();
+  if (c.includes('fruit')) return <Apple className="w-3 h-3" />;
+  if (c.includes('veg')) return <Carrot className="w-3 h-3" />;
+  if (c.includes('meat') || c.includes('beef') || c.includes('pork')) return <Beef className="w-3 h-3" />;
+  if (c.includes('sea') || c.includes('fish')) return <Fish className="w-3 h-3" />;
+  if (c.includes('grain') || c.includes('bread') || c.includes('baker')) return <Wheat className="w-3 h-3" />;
+  if (c.includes('dairy') || c.includes('milk') || c.includes('egg')) return <Milk className="w-3 h-3" />;
+  if (c.includes('frozen')) return <Flame className="w-3 h-3 text-cyan-500" />;
+  if (c.includes('pantry')) return <Package className="w-3 h-3" />;
+  if (c.includes('house') || c.includes('clean')) return <Home className="w-3 h-3" />;
+  return <Tags className="w-3 h-3" />;
+};
 
 export default function Inventory({ 
   inventory, 
@@ -220,39 +234,46 @@ export default function Inventory({
       )}
 
       {/* Category Chips Selection */}
-      <nav className="flex gap-2 overflow-x-auto no-scrollbar mb-10 py-1">
+      <nav className="flex gap-3 overflow-x-auto no-scrollbar mb-12 py-2">
         {allCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest whitespace-nowrap border transition-all ${
+            className={`flex items-center gap-1.5 px-5 py-3 rounded-xl border transition-all shadow-sm ${
               selectedCategory === cat 
                 ? 'bg-ink-black text-white border-ink-black shadow-md' 
-                : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-300'
+                : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow'
             }`}
           >
-            {cat}
+            {selectedCategory === cat && <CheckCircle2 className="w-3.5 h-3.5" />}
+            {selectedCategory !== cat && getCategoryIcon(cat)}
+            <span className="text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">{cat}</span>
           </button>
         ))}
       </nav>
 
       {/* Ingredients Catalog List */}
-      <section className="space-y-12">
+      <section className="space-y-14">
         {Object.keys(byCategory).length === 0 ? (
-          <div className="py-16 text-center bg-zinc-50 border border-dashed border-zinc-100 rounded-[24px]">
-            <p className="text-zinc-400 text-xs font-light italic">
-              {inventorySearchQuery ? 'No ingredients matched your search.' : 'Welcome! Click add to record your ingredients.'}
+          <div className="py-16 text-center bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200">
+            <p className="text-zinc-500 text-sm font-medium">
+              {inventorySearchQuery ? 'No ingredients matched your search.' : 'Your inventory is currently empty. Use the button below to add items.'}
             </p>
           </div>
         ) : (
           Object.entries(byCategory).map(([category, rawItems]) => {
             const items = rawItems as InventoryItem[];
             return (
-              <div key={category} className="animate-in fade-in duration-500">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-4 pl-1">
-                  {category} ({items.length})
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div key={category} className="animate-in fade-in duration-500 bg-zinc-50/30 rounded-3xl p-5 border border-zinc-100">
+                <div className="flex items-center gap-2 mb-5 pl-2">
+                  <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-sm text-zinc-500">
+                    {getCategoryIcon(category)}
+                  </div>
+                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-black/70">
+                    {category} <span className="text-zinc-400 font-medium tracking-normal ml-1 border pl-2 bg-white rounded-md px-1">{items.length}</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {items.map((item) => {
                     const isExpiring = item.isExpiringSoon || (item.daysLeft !== undefined && item.daysLeft <= 3);
                     const dayBadge = getDayLabel(item.daysLeft);

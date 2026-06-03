@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
-import { getNormalShelfLife } from '../lib/imageUtils';
+import { getNormalShelfLife, suggestCategory } from '../lib/imageUtils';
 
 interface ShoppingListProps {
   shoppingList: ShoppingItem[];
@@ -18,7 +18,30 @@ interface ShoppingListProps {
   onViewChange: (view: View) => void;
 }
 
+const getCategoryIcon = (category: string) => {
+  const c = category.toLowerCase();
+  if (c.includes('fruit')) return <Apple className="w-3 h-3" />;
+  if (c.includes('veg')) return <Carrot className="w-3 h-3" />;
+  if (c.includes('meat') || c.includes('beef') || c.includes('pork')) return <Beef className="w-3 h-3" />;
+  if (c.includes('sea') || c.includes('fish')) return <Fish className="w-3 h-3" />;
+  if (c.includes('grain') || c.includes('bread') || c.includes('baker')) return <Wheat className="w-3 h-3" />;
+  if (c.includes('dairy') || c.includes('milk') || c.includes('egg')) return <Milk className="w-3 h-3" />;
+  if (c.includes('frozen')) return <Flame className="w-3 h-3 text-cyan-500" />;
+  if (c.includes('pantry')) return <Package className="w-3 h-3" />;
+  if (c.includes('house') || c.includes('clean')) return <Home className="w-3 h-3" />;
+  return <Tags className="w-3 h-3" />;
+};
+
 const UNITS = ['g', 'kg', 'lbs', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
+
+const WEEKLY_FLYER_DEALS = [
+  { id: 'f1', storeName: 'T&T Supermarket', name: 'Pork Ribs', price: '$2.99/lb', category: 'Meat' },
+  { id: 'f2', storeName: 'T&T Supermarket', name: 'Napa Cabbage', price: '$0.99/lb', category: 'Vegetables' },
+  { id: 'f3', storeName: 'Costco', name: 'Toilet Paper', price: '$19.99', category: 'Household' },
+  { id: 'f4', storeName: 'Walmart', name: '2% Milk (4L)', price: '$5.49', category: 'Dairy' },
+  { id: 'f5', storeName: 'Loblaws', name: 'Avocados (Bag)', price: '$3.99', category: 'Vegetables' },
+  { id: 'f6', storeName: 'FreshCo', name: 'Chicken Breast', price: '$4.99/lb', category: 'Meat' },
+];
 
 export default function ShoppingList({
   shoppingList,
@@ -34,6 +57,9 @@ export default function ShoppingList({
   onViewChange
 }: ShoppingListProps) {
   const [newItemName, setNewItemName] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
+  const [newStoreName, setNewStoreName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Pantry');
   const [searchHistoryQuery, setSearchHistoryQuery] = useState('');
   
@@ -48,132 +74,174 @@ export default function ShoppingList({
   const [isUnitOpen, setIsUnitOpen] = useState(false);
   const [expiryDate, setExpiryDate] = useState('');
   const [autoAddInventory, setAutoAddInventory] = useState(true);
+  const [hasManuallySelectedBuyCategory, setHasManuallySelectedBuyCategory] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editItemName, setEditItemName] = useState('');
+  const [editItemAmount, setEditItemAmount] = useState('');
+  const [editItemPrice, setEditItemPrice] = useState('');
+  const [editStoreName, setEditStoreName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
 
-  type ColumnId = 'ingredient' | 'store' | 'date' | 'quantity' | 'price' | 'actions';
-  const [columnOrder, setColumnOrder] = useState<ColumnId[]>([
-    'ingredient', 'store', 'date', 'quantity', 'price', 'actions'
-  ]);
-  const [draggedColumn, setDraggedColumn] = useState<ColumnId | null>(null);
+  const [addedDeals, setAddedDeals] = useState<string[]>([]);
 
-  const columnDefinitions: Record<ColumnId, { label: React.ReactNode, renderCell: (record: PurchaseRecord) => React.ReactNode, cellClasses?: string, headerClasses?: string }> = {
-    ingredient: {
-      label: 'Ingredient',
-      renderCell: (record) => (
-        <>
-          <span className="text-sm font-semibold text-ink-black block">{record.name}</span>
-          <span className="text-[8px] font-bold text-zinc-300 uppercase tracking-wider">{record.category}</span>
-        </>
-      ),
-      cellClasses: ""
-    },
-    store: {
-      label: <>Where<br/>(Store)</>,
-      renderCell: (record) => (
-        <div className="flex items-center gap-1.5">
-          <Store className="w-3 h-3 text-zinc-300 shrink-0" />
-          {record.storeName}
-        </div>
-      ),
-      cellClasses: "text-xs font-medium text-zinc-600"
-    },
-    date: {
-      label: 'When (Date)',
-      renderCell: (record) => (
-        <div className="flex items-center gap-1.5">
-          <Calendar className="w-3 h-3 text-zinc-300 shrink-0" />
-          {record.purchaseDate}
-        </div>
-      ),
-      cellClasses: "text-xs text-zinc-500 font-sans"
-    },
-    quantity: {
-      label: 'Quantity',
-      renderCell: (record) => record.quantityBought,
-      cellClasses: "text-xs text-zinc-500 font-medium"
-    },
-    price: {
-      label: 'How Much',
-      renderCell: (record) => record.price,
-      cellClasses: "text-sm font-bold text-ink-black font-sans text-right",
-      headerClasses: "text-right"
-    },
-    actions: {
-      label: '',
-      renderCell: (record) => (
-        <div className="flex justify-end gap-2">
-          <button 
-            type="button" 
-            onClick={(e) => {
-              e.stopPropagation();
-              if(window.confirm('Delete this record?')) {
-                onDeletePurchaseRecord?.(record.id);
-              }
-            }} 
-            className="text-zinc-400 hover:text-red-500 transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      ),
-      cellClasses: "text-right",
-      headerClasses: "text-right"
-    }
-  };
+  const [activeStoreTab, setActiveStoreTab] = useState('All');
+  const [customStoreTabs, setCustomStoreTabs] = useState<string[]>(['Walmart', 'T&T Supermarket']);
+  const [isAddingStoreTab, setIsAddingStoreTab] = useState(false);
+  const [newStoreTabName, setNewStoreTabName] = useState('');
 
-  const handleDragStart = (e: React.DragEvent, col: ColumnId) => {
-    setDraggedColumn(col);
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => {
-      if (e.target instanceof HTMLElement) {
-        e.target.classList.add('opacity-50');
-      }
-    }, 0);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, targetCol: ColumnId) => {
-    e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetCol) return;
+  const handleAddFlyerDeal = (deal: typeof WEEKLY_FLYER_DEALS[0]) => {
+    onAddShoppingItem({ 
+      id: Math.random().toString(36).substring(7), 
+      name: deal.name, 
+      category: deal.category, 
+      checked: false, 
+      price: deal.price, 
+      storeName: deal.storeName 
+    } as ShoppingItem);
     
-    setColumnOrder(prev => {
-      const newOrder = [...prev];
-      const draggedIdx = newOrder.indexOf(draggedColumn);
-      const targetIdx = newOrder.indexOf(targetCol);
-      
-      newOrder.splice(draggedIdx, 1);
-      newOrder.splice(targetIdx, 0, draggedColumn);
-      
-      return newOrder;
-    });
+    setAddedDeals(prev => [...prev, deal.id]);
+    setTimeout(() => {
+      setAddedDeals(prev => prev.filter(id => id !== deal.id));
+    }, 2000);
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedColumn(null);
-    if (e.target instanceof HTMLElement) {
-      e.target.classList.remove('opacity-50');
-    }
+  const startEditingItem = (item: ShoppingItem) => {
+    setEditingItemId(item.id);
+    setEditItemName(item.name);
+    setEditItemAmount(item.amount || '');
+    setEditItemPrice(item.price || '');
+    setEditStoreName(item.storeName || '');
+    setEditCategory(item.category);
   };
+
+  const saveEditItem = () => {
+    if (editingItemId && editItemName.trim()) {
+      onUpdateShoppingItem(editingItemId, {
+        name: editItemName.trim(),
+        amount: editItemAmount.trim(),
+        price: editItemPrice.trim(),
+        storeName: editStoreName.trim(),
+        category: editCategory
+      });
+    }
+    setEditingItemId(null);
+  };
+
+  const priceHistoryText = React.useMemo(() => {
+    if (!newItemName.trim() || newItemName.length < 2) return null;
+    const history = purchaseHistory.filter(record => record.name.toLowerCase() === newItemName.trim().toLowerCase());
+    if (history.length === 0) return null;
+
+    history.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+    const lastRecord = history[0];
+    
+    let lowestRecord = history[0];
+    const getNum = (p: string) => {
+       const match = p.match(/\d+(\.\d+)?/);
+       return match ? parseFloat(match[0]) : Infinity;
+    };
+    
+    history.forEach(r => {
+       if (getNum(r.price) < getNum(lowestRecord.price)) {
+           lowestRecord = r;
+       }
+    });
+
+    if (lastRecord.price === lowestRecord.price && lastRecord.storeName === lowestRecord.storeName) {
+        return `Last bought at ${lastRecord.storeName} for ${lastRecord.price}`;
+    }
+    return `Last bought at ${lastRecord.storeName} for ${lastRecord.price}, lowest record at ${lowestRecord.storeName} for ${lowestRecord.price}`;
+  }, [newItemName, purchaseHistory]);
+
+  useEffect(() => {
+    if (newItemName.length > 2 && !hasManuallySelectedBuyCategory) {
+      const suggestion = suggestCategory(newItemName);
+      if (suggestion) {
+        setSelectedCategory(suggestion);
+      }
+    }
+  }, [newItemName, hasManuallySelectedBuyCategory]);
+
+  useEffect(() => {
+    if (activeCompletingItem && activeCompletingItem.id === 'direct-purchase' && activeCompletingItem.name.length > 2) {
+      const suggestion = suggestCategory(activeCompletingItem.name);
+      if (suggestion && activeCompletingItem.category === 'Household') {
+        setActiveCompletingItem({...activeCompletingItem, category: suggestion});
+        setAutoAddInventory(suggestion !== 'Household');
+      }
+    }
+  }, [activeCompletingItem?.name]);
 
   const activeItems = shoppingList.filter(item => !item.checked);
+
+  const allStoreTabs = React.useMemo(() => {
+    const stores = new Set<string>(customStoreTabs);
+    activeItems.forEach(item => {
+      if (item.storeName && item.storeName !== 'Anywhere') {
+        stores.add(item.storeName);
+      }
+    });
+    return Array.from(stores).sort();
+  }, [activeItems, customStoreTabs]);
+
+  const activeItemsByStore = activeItems.reduce((acc, item) => {
+    const store = item.storeName || 'Anywhere';
+    if (!acc[store]) acc[store] = [];
+    acc[store].push(item);
+    return acc;
+  }, {} as Record<string, ShoppingItem[]>);
   
   const handleAddItemToBuy = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
 
+    let targetStore = newStoreName.trim();
+    if (activeStoreTab !== 'All' && !targetStore) {
+      targetStore = activeStoreTab;
+    }
+
+    let finalPrice = newItemPrice.trim();
+    
+    // Auto-fill cheapest price and store if none provided
+    if (!finalPrice || !targetStore) {
+      const history = purchaseHistory.filter(record => record.name.toLowerCase() === newItemName.trim().toLowerCase());
+      if (history.length > 0) {
+        let lowestRecord = history[0];
+        const getNum = (p: string) => {
+           const match = p.match(/\d+(\.\d+)?/);
+           return match ? parseFloat(match[0]) : Infinity;
+        };
+        history.forEach(r => {
+           if (getNum(r.price) < getNum(lowestRecord.price)) {
+               lowestRecord = r;
+           }
+        });
+        
+        if (!finalPrice) {
+          finalPrice = lowestRecord.price;
+        }
+        if (!targetStore && activeStoreTab === 'All') {
+          targetStore = lowestRecord.storeName || '';
+        }
+      }
+    }
+
     const newItem: ShoppingItem = {
       id: Math.random().toString(36).substring(7),
       name: newItemName.trim(),
       category: selectedCategory,
+      storeName: targetStore,
+      amount: newItemAmount.trim(),
+      price: finalPrice,
       checked: false
     };
 
     onAddShoppingItem(newItem);
     setNewItemName('');
+    setNewItemAmount('');
+    setNewItemPrice('');
+    setNewStoreName('');
+    setHasManuallySelectedBuyCategory(false);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -183,8 +251,8 @@ export default function ShoppingList({
   const initiateCheck = (item: ShoppingItem) => {
     setActiveCompletingItem(item);
     // Autofill with some logical default or clear
-    setStoreName('');
-    setPrice('');
+    setStoreName(item.storeName || '');
+    setPrice(item.price || '');
     setQuantityBought('1');
     setUnitBought('pcs');
     setIsUnitOpen(false);
@@ -201,6 +269,25 @@ export default function ShoppingList({
     setIsUnitOpen(false);
     setExpiryDate('');
     setAutoAddInventory(false);
+  };
+
+  const quickCheck = (item: ShoppingItem) => {
+    onUpdateShoppingItem(item.id, { 
+      checked: true, 
+      storeName: item.storeName || 'Unspecified', 
+      price: item.price || 'Unspecified', 
+      purchaseDate: new Date().toISOString().split('T')[0], 
+      quantityBought: item.amount || '1' 
+    });
+
+    if (item.category !== 'Household') {
+      onAddToInventory({
+        name: item.name,
+        category: item.category,
+        quantity: item.amount || '1',
+        location: 'Pantry',
+      });
+    }
   };
 
   const submitPurchaseDetails = () => {
@@ -265,37 +352,158 @@ export default function ShoppingList({
         </p>
       </header>
 
+      {/* Weekly Flyer Deals */}
+      <section className="mb-8">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-3 flex items-center gap-2">
+          <Tag className="w-3.5 h-3.5" />
+          Weekly Flyer Deals
+        </h3>
+        <div className="flex gap-3 overflow-x-auto pb-4 pt-1 snap-x scrollbar-hide">
+          {WEEKLY_FLYER_DEALS.map((deal) => (
+            <button
+              key={deal.id}
+              type="button"
+              onClick={() => handleAddFlyerDeal(deal)}
+              className={`snap-start shrink-0 p-3 bg-white border ${addedDeals.includes(deal.id) ? 'border-bamboo-green bg-green-50' : 'border-red-100 hover:border-red-300'} rounded-[16px] text-left min-w-[140px] shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0 text-ink-black flex flex-col gap-1.5`}
+            >
+              <div className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider ${addedDeals.includes(deal.id) ? 'text-bamboo-green' : 'text-red-500'}`}>
+                {addedDeals.includes(deal.id) ? (
+                  <><CheckCircle2 className="w-3 h-3" /> Added</>
+                ) : (
+                  <><Store className="w-3 h-3" /> {deal.storeName}</>
+                )}
+              </div>
+              <div className="font-bold text-sm leading-tight text-ink-black">{deal.name}</div>
+              <div className="text-sm font-bold text-zinc-500 bg-red-50 px-2 py-0.5 rounded-md self-start">{deal.price}</div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Store Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-6 py-2">
+        <button
+          onClick={() => setActiveStoreTab('All')}
+          className={`flex-shrink-0 px-5 py-2.5 rounded-[12px] text-xs font-bold uppercase tracking-widest transition-all border ${
+            activeStoreTab === 'All' 
+              ? 'bg-ink-black text-white border-ink-black shadow-md' 
+              : 'bg-white text-zinc-500 hover:bg-zinc-50 border-zinc-200 hover:shadow-sm'
+          }`}
+        >
+          All Stores
+        </button>
+        {allStoreTabs.map(store => (
+          <button
+            key={store}
+            onClick={() => setActiveStoreTab(store)}
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-xs font-bold uppercase tracking-widest transition-all border ${
+              activeStoreTab === store 
+                ? 'bg-ink-black text-white border-ink-black shadow-md' 
+                : 'bg-white text-zinc-500 hover:bg-zinc-50 border-zinc-200 hover:shadow-sm'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5" />
+            {store}
+          </button>
+        ))}
+        {isAddingStoreTab ? (
+          <form 
+            onSubmit={(e) => { 
+               e.preventDefault(); 
+               if (newStoreTabName.trim() && !allStoreTabs.includes(newStoreTabName.trim())) {
+                 setCustomStoreTabs([...customStoreTabs, newStoreTabName.trim()]);
+                 setActiveStoreTab(newStoreTabName.trim());
+               }
+               setNewStoreTabName('');
+               setIsAddingStoreTab(false);
+            }} 
+            className="flex-shrink-0 flex items-center bg-white border border-ink-black rounded-[12px] px-2 py-1 shadow-sm"
+          >
+            <input 
+              autoFocus 
+              value={newStoreTabName} 
+              onChange={e => setNewStoreTabName(e.target.value)} 
+              onBlur={() => setIsAddingStoreTab(false)}
+              placeholder="Store name..."
+              className="bg-transparent border-none focus:outline-none text-xs px-3 py-1.5 w-32 text-ink-black uppercase font-bold tracking-widest"
+            />
+          </form>
+        ) : (
+          <button 
+            onClick={() => setIsAddingStoreTab(true)}
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-xs font-bold uppercase tracking-widest transition-all border bg-white text-zinc-500 border-zinc-200 border-dashed hover:border-zinc-300 hover:bg-zinc-50"
+          >
+            <Plus className="w-3.5 h-3.5" /> Store
+          </button>
+        )}
+      </div>
+
       {/* Part 1: Quick Add to Buy Form */}
       <section className="mb-10 p-6 bg-zinc-50 rounded-[20px] border border-zinc-100">
         <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-4 flex items-center gap-2">
           <ShoppingBag className="w-3.5 h-3.5 text-ink-black" />
-          Add Item to buy
+          Add Item to {activeStoreTab === 'All' ? 'buy' : activeStoreTab}
         </h3>
         
-        <form onSubmit={handleAddItemToBuy} className="flex flex-col sm:flex-row gap-3">
-          <input 
-            type="text"
-            placeholder="What should we buy? (e.g., Avocados, Soy sauce)"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            className="flex-1 px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
-          />
-          <div className="flex gap-2">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-3 bg-white border border-zinc-200 rounded-[12px] text-xs font-medium focus:outline-none focus:border-zinc-300"
-            >
-              {categories.filter(c => c !== 'All Items').map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="px-5 py-3 bg-ink-black text-white hover:bg-zinc-800 rounded-[12px] flex items-center justify-center transition-all shadow-sm active:scale-95 text-xs font-bold uppercase tracking-widest gap-2"
-            >
-              <Plus className="w-4 h-4" /> Add
-            </button>
+        <form onSubmit={handleAddItemToBuy} className="flex flex-col gap-3">
+          <div className="flex flex-col">
+            <input 
+              type="text"
+              placeholder={`What should we buy${activeStoreTab !== 'All' ? ` at ${activeStoreTab}` : ''}? (e.g., Avocados, Soy sauce)`}
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
+            />
+            {priceHistoryText && (
+              <span className="text-[10px] text-zinc-500 font-medium px-2 pt-1.5 flex items-center gap-1">
+                <Tag className="w-3 h-3 text-bamboo-green" /> {priceHistoryText}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3">
+            <input
+              type="text"
+              placeholder="Amount/Qty (e.g., 2 lbs) - Opt"
+              value={newItemAmount}
+              onChange={(e) => setNewItemAmount(e.target.value)}
+              className="flex-1 w-full sm:w-auto px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="Est. Price (e.g., $3.99) - Opt"
+              value={newItemPrice}
+              onChange={(e) => setNewItemPrice(e.target.value)}
+              className="flex-1 w-full sm:w-auto px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
+            />
+            {activeStoreTab === 'All' && (
+              <input
+                type="text"
+                placeholder="Where? (e.g., Costco) - Optional"
+                value={newStoreName}
+                onChange={(e) => setNewStoreName(e.target.value)}
+                className="flex-1 w-full sm:w-auto px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
+              />
+            )}
+            <div className="flex gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setHasManuallySelectedBuyCategory(true);
+                }}
+                className="flex-[2] sm:flex-none px-3 py-3 bg-white border border-zinc-200 rounded-[12px] text-xs font-medium focus:outline-none focus:border-zinc-300 min-w-[120px]"
+              >
+                {categories.filter(c => c !== 'All Items').map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="flex-1 sm:flex-none shrink-0 px-8 py-3 bg-ink-black text-white hover:bg-zinc-800 rounded-[12px] flex items-center justify-center transition-all shadow-sm active:scale-95 text-xs font-bold uppercase tracking-widest gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </div>
           </div>
         </form>
       </section>
@@ -307,41 +515,129 @@ export default function ShoppingList({
         </div>
 
         {activeItems.length === 0 ? (
-          <div className="p-8 text-center bg-white rounded-[16px] border border-dashed border-zinc-200">
-            <p className="text-zinc-400 text-[11px] italic font-medium">
+          <div className="p-8 text-center bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200">
+            <p className="text-zinc-500 text-sm font-medium">
               No pending purchases. Everything is fully stocked!
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {activeItems.map(item => (
-              <div 
-                key={item.id} 
-                className="p-4 bg-white border border-zinc-100 rounded-[14px] flex items-center justify-between hover:shadow-sm transition-all group"
-              >
-                <button
-                  onClick={() => initiateCheck(item)}
-                  className="flex items-center gap-3.5 text-left flex-1"
-                >
-                  <Circle className="w-5 h-5 text-zinc-300 hover:text-bamboo-green transition-colors shrink-0" />
-                  <div>
-                    <span className="font-semibold text-ink-black text-sm block">{item.name}</span>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-300">{item.category}</span>
+          <div className="space-y-8">
+            {Object.entries(activeItemsByStore)
+              .filter(([store]) => activeStoreTab === 'All' || store === activeStoreTab)
+              .map(([store, items]) => (
+              <div key={store} className="bg-zinc-50/30 rounded-3xl p-5 shadow-sm border border-zinc-100 animate-in fade-in">
+                <div className="flex items-center gap-2 mb-5 pl-2">
+                  <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-sm text-zinc-500">
+                    <Store className="w-4 h-4" />
                   </div>
-                </button>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => initiateCheck(item)}
-                    className="p-1 px-3.5 bg-zinc-50 text-ink-black hover:bg-zinc-100 text-[9px] font-bold uppercase tracking-widest rounded-full transition-all flex items-center gap-1 border border-zinc-100 opacity-60 group-hover:opacity-100"
-                  >
-                    Buy <ArrowUpRight className="w-2.5 h-2.5" />
-                  </button>
-                  <button 
-                    onClick={() => handleRemoveItem(item.id)}
-                    className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-ink-black/70">
+                    {store} <span className="text-zinc-400 font-medium tracking-normal ml-1 border pl-2 bg-white rounded-md px-1">{items.length}</span>
+                  </h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {items.map((item) => (
+                    <div 
+                      key={item.id} 
+                      className="p-4 bg-white border border-zinc-100 rounded-2xl flex flex-col hover:shadow-md hover:border-zinc-200 transition-all group gap-3 shadow-sm"
+                    >
+                      {editingItemId === item.id ? (
+                        <div className="flex-1 w-full space-y-3">
+                          <div className="flex gap-2 w-full">
+                            <input 
+                              type="text" 
+                              value={editItemName}
+                              onChange={(e) => setEditItemName(e.target.value)}
+                              className="flex-1 px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-sm focus:outline-none focus:border-zinc-400"
+                              placeholder="Item name"
+                              autoFocus
+                            />
+                            <select
+                              value={editCategory}
+                              onChange={(e) => setEditCategory(e.target.value)}
+                              className="w-1/3 px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-xs font-medium focus:outline-none focus:border-zinc-300"
+                            >
+                              {categories.filter(c => c !== 'All Items').map(c => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                            <input 
+                              type="text" 
+                              value={editItemAmount}
+                              onChange={(e) => setEditItemAmount(e.target.value)}
+                              className="flex-1 min-w-[70px] px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-xs focus:outline-none focus:border-zinc-400"
+                              placeholder="Opt. Amount"
+                            />
+                            <input 
+                              type="text" 
+                              value={editItemPrice}
+                              onChange={(e) => setEditItemPrice(e.target.value)}
+                              className="flex-1 min-w-[70px] px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-xs focus:outline-none focus:border-zinc-400"
+                              placeholder="Price"
+                            />
+                            <input 
+                              type="text" 
+                              value={editStoreName}
+                              onChange={(e) => setEditStoreName(e.target.value)}
+                              className="flex-[1.5] min-w-[100px] px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-xs focus:outline-none focus:border-zinc-400"
+                              placeholder="Store (optional)"
+                            />
+                            <button onClick={saveEditItem} className="px-3 py-2 bg-ink-black text-white text-xs font-bold rounded-[8px] whitespace-nowrap shrink-0">
+                              Save
+                            </button>
+                            <button onClick={() => setEditingItemId(null)} className="px-3 py-2 bg-zinc-200 text-zinc-600 text-xs font-bold rounded-[8px] whitespace-nowrap shrink-0">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-3.5 text-left flex-1" title="Click to edit item">
+                            <button onClick={(e) => { e.stopPropagation(); quickCheck(item); }} className="shrink-0 p-1" title="Quick check off without logging details">
+                              <Circle className="w-5 h-5 text-zinc-400 hover:text-bamboo-green transition-colors" />
+                            </button>
+                            <div className="flex-1 cursor-text flex items-start justify-between" onClick={() => startEditingItem(item)}>
+                              <div className="min-w-0 pr-2">
+                                <span className="font-semibold text-ink-black text-sm block mb-1 truncate">{item.name}</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5 w-fit">
+                                    {getCategoryIcon(item.category)}
+                                    {item.category}
+                                  </span>
+                                  {item.price && (
+                                    <span className="text-[10px] font-bold tracking-wider text-bamboo-green flex items-center gap-1 bg-green-50 border border-green-100 rounded-md px-1.5 py-0.5 w-fit">
+                                      <DollarSign className="w-2.5 h-2.5" />
+                                      {item.price}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {item.amount && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-50 border border-zinc-100 px-2 py-1 rounded-md shrink-0">
+                                  {item.amount}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button 
+                              onClick={() => initiateCheck(item)}
+                              className="p-1 px-3 bg-white text-ink-black hover:bg-zinc-100 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all flex items-center gap-1 border border-zinc-300 shadow-sm"
+                            >
+                              Buy <ArrowUpRight className="w-3 h-3 text-zinc-500" />
+                            </button>
+                            <button 
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -434,42 +730,53 @@ export default function ShoppingList({
                     <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 flex items-center gap-1.5">
                       <Archive className="w-3 h-3 text-zinc-400" /> Quantity
                     </label>
-                    <div className="flex bg-zinc-50 border border-zinc-200 rounded-[12px] overflow-visible focus-within:bg-white focus-within:border-zinc-400 transition-all relative">
-                      <input 
-                        type="number" 
-                        value={quantityBought}
-                        onChange={(e) => setQuantityBought(e.target.value)}
-                        className="w-full border-0 bg-transparent px-4 py-3 text-sm focus:ring-0 font-medium text-ink-black focus:outline-none" 
-                      />
-                      <div 
-                        className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-200 relative"
-                        onClick={() => setIsUnitOpen(!isUnitOpen)}
-                      >
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unitBought}</span>
-                        <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
-                        
-                        <AnimatePresence>
-                          {isUnitOpen && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 10 }}
-                              className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
-                            >
-                              {UNITS.map(u => (
-                                <button 
-                                  key={u}
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); setUnitBought(u); setIsUnitOpen(false); }}
-                                  className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
-                                >
-                                  {u}
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex bg-zinc-50 border border-zinc-200 rounded-[12px] overflow-visible focus-within:bg-white focus-within:border-zinc-400 transition-all relative">
+                        <input 
+                          type="number" 
+                          value={quantityBought}
+                          onChange={(e) => setQuantityBought(e.target.value)}
+                          className="w-full border-0 bg-transparent px-4 py-3 text-sm focus:ring-0 font-medium text-ink-black focus:outline-none" 
+                        />
+                        <div 
+                          className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-200 relative"
+                          onClick={() => setIsUnitOpen(!isUnitOpen)}
+                        >
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unitBought}</span>
+                          <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
+                          
+                          <AnimatePresence>
+                            {isUnitOpen && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
+                              >
+                                {UNITS.map(u => (
+                                  <button 
+                                    key={u}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setUnitBought(u); setIsUnitOpen(false); }}
+                                    className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
+                                  >
+                                    {u}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max={(unitBought === 'g' || unitBought === 'ml') ? 2000 : 50}
+                        step={(unitBought === 'g' || unitBought === 'ml') ? 10 : 1}
+                        value={Number(quantityBought) || 1}
+                        onChange={(e) => setQuantityBought(e.target.value)}
+                        className="w-full h-2 mb-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
+                      />
                     </div>
                   </div>
                 </div>
@@ -658,42 +965,62 @@ export default function ShoppingList({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-[16px] border border-zinc-100">
-            <table className="w-full text-left border-collapse bg-white">
-              <thead>
-                <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                  {columnOrder.map(col => (
-                    <th 
-                      key={col}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, col)}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, col)}
-                      onDragEnd={handleDragEnd}
-                      className={`py-3 px-4 text-[9px] font-bold uppercase tracking-wider text-zinc-400 cursor-move hover:bg-zinc-100/50 transition-colors ${columnDefinitions[col].headerClasses || ''}`}
-                      title="Drag to reorder column"
-                    >
-                      {columnDefinitions[col].label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {filteredHistory.map(record => (
-                  <tr 
-                    key={record.id} 
-                    className="hover:bg-zinc-50/55 transition-colors cursor-pointer"
-                    onClick={() => setEditingHistoryItem(record)}
+          <div className="space-y-3">
+            {filteredHistory.map(record => (
+              <div 
+                key={record.id} 
+                className="bg-white border border-zinc-100 rounded-[16px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:shadow-sm hover:border-zinc-200 transition-all group"
+                onClick={() => setEditingHistoryItem(record)}
+              >
+                <div className="flex-1">
+                  <div className="flex items-start justify-between sm:justify-start sm:gap-4 mb-2 sm:mb-1">
+                    <div>
+                      <h4 className="font-semibold text-ink-black text-sm mb-1">{record.name}</h4>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 w-fit bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5">
+                        {getCategoryIcon(record.category)}
+                        {record.category}
+                      </span>
+                    </div>
+                    <div className="text-right sm:hidden">
+                      <div className="font-bold text-ink-black text-sm">{record.price}</div>
+                      <div className="text-[11px] font-medium text-zinc-500 bg-zinc-50 rounded-md px-1 py-0.5 mt-1 border border-zinc-100">Qty: {record.quantityBought}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-50 px-2 py-1.5 rounded-md border border-zinc-200">
+                      <Store className="w-4 h-4 text-zinc-500" />
+                      {record.storeName}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-600 bg-zinc-50 px-2 py-1.5 rounded-md border border-zinc-200">
+                      <Calendar className="w-4 h-4 text-zinc-500" />
+                      {record.purchaseDate}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="hidden sm:flex flex-col items-end gap-1 mb-2 pr-4 border-r border-zinc-200">
+                  <span className="font-bold text-ink-black text-base">{record.price}</span>
+                  <span className="text-[11px] uppercase font-bold tracking-wider text-zinc-500">Qty: {record.quantityBought}</span>
+                </div>
+
+                <div className="flex justify-end mt-2 sm:mt-0">
+                  <button 
+                    type="button" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if(window.confirm('Delete this record?')) {
+                        onDeletePurchaseRecord?.(record.id);
+                      }
+                    }} 
+                    className="p-2 bg-white border border-zinc-100 text-zinc-400 rounded-full hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-colors"
+                    title="Delete"
                   >
-                    {columnOrder.map(col => (
-                      <td key={`${record.id}-${col}`} className={`py-3.5 px-4 ${columnDefinitions[col].cellClasses || ''}`}>
-                        {columnDefinitions[col].renderCell(record)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>

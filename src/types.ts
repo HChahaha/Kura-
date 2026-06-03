@@ -45,6 +45,7 @@ export interface ShoppingItem {
   checked: boolean;
   price?: string;
   storeName?: string;
+  amount?: string;
   purchaseDate?: string;
   quantityBought?: string;
 }

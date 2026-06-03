@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutGrid, BookOpen, Settings, Camera, Plus, ReceiptText, ShoppingBag, Bell, Calendar, ShoppingCart, CheckCircle2 } from 'lucide-react';
+import { LayoutGrid, BookOpen, Settings, Camera, Plus, ReceiptText, ShoppingBag, Bell, Calendar, ShoppingCart, CheckCircle2, Home, ChefHat, Archive } from 'lucide-react';
 import { View, InventoryItem, ShoppingItem } from '../types';
 
 interface NavigationProps {
@@ -131,9 +131,9 @@ export function TopBar({ currentView, onViewChange, inventory = [], shoppingList
 export function BottomNav({ currentView, onViewChange }: NavigationProps) {
   if (currentView === 'auth') return null;
   const navItems = [
-    { id: 'inventory', label: 'Inventory', icon: LayoutGrid },
-    { id: 'shopping', label: 'To Buy', icon: ShoppingBag },
-    { id: 'recipes', label: 'Recipes', icon: BookOpen },
+    { id: 'inventory', label: 'Inventory', icon: Archive },
+    { id: 'shopping', label: 'To Buy', icon: ShoppingCart },
+    { id: 'recipes', label: 'Recipes', icon: ChefHat },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

@@ -29,19 +29,20 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+  const [hasManuallySelectedCategory, setHasManuallySelectedCategory] = useState(false);
 
   // Auto-suggest category
   useEffect(() => {
     if (name.length > 2) {
       const suggestion = suggestCategory(name);
       setSuggestedCategory(suggestion);
-      if (suggestion && !category) {
+      if (suggestion && !hasManuallySelectedCategory) {
         setCategory(suggestion);
       }
     } else {
       setSuggestedCategory(null);
     }
-  }, [name]);
+  }, [name, hasManuallySelectedCategory]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,42 +165,53 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
           {/* Quantity & Units */}
           <FormField label="Quantity">
-            <div className="flex bg-washi-gray border border-zinc-50 rounded-[12px] overflow-visible focus-within:border-zinc-300 transition-all relative">
-              <input 
-                type="number" 
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="w-full border-0 bg-transparent px-4 py-4 focus:ring-0 font-medium text-ink-black" 
-              />
-              <div 
-                className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-50 relative"
-                onClick={() => setIsUnitOpen(!isUnitOpen)}
-              >
-                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unit}</span>
-                <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
-                
-                <AnimatePresence>
-                  {isUnitOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
-                    >
-                      {UNITS.map(u => (
-                        <button 
-                          key={u}
-                          type="button"
-                          onClick={() => { setUnit(u); setIsUnitOpen(false); }}
-                          className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
-                        >
-                          {u}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            <div className="flex flex-col gap-3">
+              <div className="flex bg-washi-gray border border-zinc-50 rounded-[12px] overflow-visible focus-within:border-zinc-300 transition-all relative">
+                <input 
+                  type="number" 
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="w-full border-0 bg-transparent px-4 py-4 focus:ring-0 font-medium text-ink-black" 
+                />
+                <div 
+                  className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-50 relative"
+                  onClick={() => setIsUnitOpen(!isUnitOpen)}
+                >
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unit}</span>
+                  <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
+                  
+                  <AnimatePresence>
+                    {isUnitOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
+                      >
+                        {UNITS.map(u => (
+                          <button 
+                            key={u}
+                            type="button"
+                            onClick={() => { setUnit(u); setIsUnitOpen(false); }}
+                            className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
+                          >
+                            {u}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
+              <input
+                type="range"
+                min="1"
+                max={(unit === 'g' || unit === 'ml') ? 2000 : 50}
+                step={(unit === 'g' || unit === 'ml') ? 10 : 1}
+                value={Number(quantity) || 1}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="w-full h-2 mb-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
+              />
             </div>
           </FormField>
 
@@ -236,7 +248,7 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
                       <button 
                         key={cat}
                         type="button"
-                        onClick={() => { setCategory(cat); setIsCategoryOpen(false); }}
+                        onClick={() => { setCategory(cat); setIsCategoryOpen(false); setHasManuallySelectedCategory(true); }}
                         className="w-full px-5 py-3 text-left text-xs font-medium text-zinc-500 hover:text-ink-black hover:bg-zinc-50 flex items-center justify-between font-sans"
                       >
                         {cat}

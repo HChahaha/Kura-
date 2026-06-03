@@ -66,6 +66,8 @@ export default function App() {
     const itemData: any = {
       name: newItem.name,
       category: newItem.category,
+      storeName: newItem.storeName || '',
+      price: newItem.price || '',
       checked: newItem.checked || false,
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -125,8 +127,9 @@ export default function App() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
+    if (savedTheme !== 'light') {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     }
   }, []);
 
@@ -550,7 +553,7 @@ export default function App() {
               const recipeData = {
                 ...r,
                 userId: user.uid,
-                createdAt: serverTimestamp(),
+                createdAt: recipeToEdit?.createdAt || serverTimestamp(),
                 updatedAt: serverTimestamp()
               };
               

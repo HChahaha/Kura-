@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Camera, Plus, X, List, Clock, ChefHat, Sparkles } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, X, List, Clock, ChefHat, Sparkles, Brain, Link, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { View } from '../types';
 
 interface AddRecipeProps {
@@ -31,6 +31,72 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
   const [protein, setProtein] = useState(recipeToEdit?.protein || '20g');
   const [fat, setFat] = useState(recipeToEdit?.fat || '10g');
   const [carbs, setCarbs] = useState(recipeToEdit?.carbs || '40g');
+
+  // AI Import State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiUrl, setAiUrl] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
+
+  const parseAiRecipe = async (type: 'url' | 'image', payload: { url?: string; file?: File }) => {
+    setIsAiLoading(true);
+    setAiError('');
+    try {
+      let requestBody: any = { inputType: type };
+      
+      if (type === 'url' && payload.url) {
+        requestBody.url = payload.url;
+      } else if (type === 'image' && payload.file) {
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.readAsDataURL(payload.file!);
+        });
+        requestBody.imageData = base64Data;
+        requestBody.mimeType = payload.file.type;
+      }
+
+      const res = await fetch('/api/parse-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to parse recipe');
+      }
+
+      const data = await res.json();
+      
+      if (data.title) setName(data.title);
+      if (data.time) setPrepTime(data.time.replace(/\D/g, '') || data.time);
+      if (data.calories) setCalories(data.calories.toString());
+      if (data.difficulty) setDifficulty(data.difficulty);
+      if (data.servings) setServings(data.servings.toString());
+      
+      if (data.ingredients && Array.isArray(data.ingredients)) {
+        setIngredients(data.ingredients.map((ing: any) => ({
+          id: Math.random().toString(36).substring(7),
+          name: ing.name || '',
+          quantity: ing.quantity || ''
+        })));
+      }
+      
+      if (data.instructions && Array.isArray(data.instructions)) {
+        setSteps(data.instructions.map((step: string) => ({
+          id: Math.random().toString(36).substring(7),
+          text: step
+        })));
+      }
+
+      setIsAiModalOpen(false);
+    } catch (err: any) {
+      setAiError(err.message || 'An error occurred during parsing.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const addIngredient = () => {
     setIngredients(prev => [...prev, { id: Math.random().toString(36).substring(7), name: '', quantity: '' }]);
@@ -95,12 +161,20 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
             <h1 className="text-xl font-light text-ink-black">{recipeToEdit ? 'Edit Creation' : 'New Creation'}</h1>
           </div>
         </div>
-        <button 
-          onClick={handleSave}
-          className="text-[10px] font-bold uppercase tracking-[0.3em] text-bamboo-green hover:opacity-70 transition-all px-4 py-2 bg-bamboo-green/5 rounded-full"
-        >
-          {recipeToEdit ? 'Save Changes' : 'Publish'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsAiModalOpen(true)}
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500 hover:opacity-70 transition-all px-4 py-2 bg-indigo-50 rounded-full"
+          >
+            <Brain className="w-3.5 h-3.5" /> AI Import
+          </button>
+          <button 
+            onClick={handleSave}
+            className="text-[10px] font-bold uppercase tracking-[0.3em] text-bamboo-green hover:opacity-70 transition-all px-4 py-2 bg-bamboo-green/5 rounded-full"
+          >
+            {recipeToEdit ? 'Save Changes' : 'Publish'}
+          </button>
+        </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-6 pt-12">
@@ -335,6 +409,101 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
           </div>
         </button>
       </div>
+
+      <AnimatePresence>
+        {isAiModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isAiLoading && setIsAiModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl overflow-hidden p-8"
+            >
+              <button 
+                onClick={() => !isAiLoading && setIsAiModalOpen(false)}
+                className="absolute top-6 right-6 text-zinc-400 hover:text-ink-black transition-colors"
+                disabled={isAiLoading}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-2">
+                <Brain className="w-6 h-6 text-indigo-500" />
+                <h2 className="text-xl font-light text-ink-black">AI Recipe Import</h2>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mb-8">Paste a recipe URL or upload a screenshot to automatically extract ingredients and instructions.</p>
+
+              {aiError && (
+                <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-600 text-xs font-medium border border-red-100 flex items-start gap-2">
+                   <div className="mt-0.5"><X className="w-3.5 h-3.5" /></div>
+                   {aiError}
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Paste URL</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 relative">
+                       <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                       <input 
+                         type="url"
+                         placeholder="https://..."
+                         value={aiUrl}
+                         onChange={(e) => setAiUrl(e.target.value)}
+                         disabled={isAiLoading}
+                         className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:bg-white transition-colors"
+                       />
+                    </div>
+                    <button 
+                      onClick={() => parseAiRecipe('url', { url: aiUrl })}
+                      disabled={isAiLoading || !aiUrl.trim()}
+                      className="px-6 py-3 bg-indigo-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-50 hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 min-w-[100px]"
+                    >
+                      {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Fetch'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className=" absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-100"></div></div>
+                  <div className="relative flex justify-center"><span className="bg-white px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">OR</span></div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Upload Image / Screenshot</label>
+                  <label className={`block w-full border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${isAiLoading ? 'opacity-50 pointer-events-none' : 'border-zinc-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                           parseAiRecipe('image', { file });
+                           // Reset input
+                           e.target.value = '';
+                        }
+                      }}
+                      disabled={isAiLoading}
+                    />
+                    <ImageIcon className="w-8 h-8 mx-auto text-zinc-300 mb-3" />
+                    <span className="text-sm font-medium text-ink-black block mb-1">Click to browse or drag image</span>
+                    <span className="text-xs text-zinc-400 block">JPEG, PNG up to 5MB</span>
+                  </label>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

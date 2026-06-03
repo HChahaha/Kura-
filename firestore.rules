@@ -55,6 +55,15 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidRecipe(data) {
+      return data.keys().hasAll(['userId', 'name', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 200 &&
+             (data.get('description', '') is string && data.get('description', '').size() <= 2500) &&
+             (data.get('image', '') is string && data.get('image', '').size() <= 1000) &&
+             data.createdAt == request.time;
+    }
+
     match /users/{userId}/inventory/{itemId} {
       allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
       allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidInventoryItem(incoming());
@@ -89,7 +98,13 @@ service cloud.firestore {
     }
 
     match /users/{userId}/recipes/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidRecipe(incoming());
+      allow update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && 
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (!incoming().keys().hasAny(['userId', 'createdAt']) || (incoming().userId == existing().userId && incoming().createdAt == existing().createdAt));
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
     }
   }
 }

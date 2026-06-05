@@ -69,6 +69,10 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
 
       const data = await res.json();
       
+      if (!data?.title && (!data?.ingredients || data.ingredients.length === 0)) {
+        throw new Error("Could not extract recipe details. Please try copying the text or uploading a clearer screenshot.");
+      }
+      
       if (data?.title) setName(data.title);
       if (data?.time) {
         const timeStr = String(data.time).replace(/\D/g, '');

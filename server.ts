@@ -47,7 +47,6 @@ app.post("/api/parse-recipe", async (req, res) => {
       model: "gemini-2.5-flash",
       contents: { parts },
       config: {
-        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

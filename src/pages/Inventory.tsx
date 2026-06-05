@@ -253,7 +253,7 @@ export default function Inventory({
       </nav>
 
       {/* Ingredients Catalog List */}
-      <section className="space-y-14">
+      <section id="tour-inventory-cards" className="space-y-14">
         {Object.keys(byCategory).length === 0 ? (
           <div className="py-16 text-center bg-zinc-50/50 rounded-3xl border border-dashed border-zinc-200">
             <p className="text-zinc-500 text-sm font-medium">

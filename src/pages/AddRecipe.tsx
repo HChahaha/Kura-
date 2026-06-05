@@ -170,6 +170,7 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
         </div>
         <div className="flex items-center gap-3">
           <button 
+            id="btn-ai-import"
             onClick={() => setIsAiModalOpen(true)}
             className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500 hover:opacity-70 transition-all px-4 py-2 bg-indigo-50 rounded-full"
           >

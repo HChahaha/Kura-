@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
 import { getNormalShelfLife, suggestCategory } from '../lib/imageUtils';
 
@@ -34,14 +34,45 @@ const getCategoryIcon = (category: string) => {
 
 const UNITS = ['g', 'kg', 'lbs', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'cans', 'bottles', 'bags', 'boxes'];
 
-const WEEKLY_FLYER_DEALS = [
-  { id: 'f1', storeName: 'T&T Supermarket', name: 'Pork Ribs', price: '$2.99/lb', category: 'Meat' },
-  { id: 'f2', storeName: 'T&T Supermarket', name: 'Napa Cabbage', price: '$0.99/lb', category: 'Vegetables' },
-  { id: 'f3', storeName: 'Costco', name: 'Toilet Paper', price: '$19.99', category: 'Household' },
-  { id: 'f4', storeName: 'Walmart', name: '2% Milk (4L)', price: '$5.49', category: 'Dairy' },
-  { id: 'f5', storeName: 'Loblaws', name: 'Avocados (Bag)', price: '$3.99', category: 'Vegetables' },
-  { id: 'f6', storeName: 'FreshCo', name: 'Chicken Breast', price: '$4.99/lb', category: 'Meat' },
-];
+const ALL_DEALS: Record<string, any[]> = {
+  'Canada': [
+    { id: 'f1', storeName: 'T&T Supermarket', name: 'Pork Ribs', price: '$2.99/lb', category: 'Meat' },
+    { id: 'f2', storeName: 'T&T Supermarket', name: 'Napa Cabbage', price: '$0.99/lb', category: 'Vegetables' },
+    { id: 'f3', storeName: 'Costco', name: 'Toilet Paper', price: '$19.99', category: 'Household' },
+    { id: 'f4', storeName: 'Walmart', name: '2% Milk (4L)', price: '$5.49', category: 'Dairy' },
+    { id: 'f5', storeName: 'Superstore', name: 'Avocados (Bag)', price: '$3.99', category: 'Vegetables' },
+    { id: 'f6', storeName: 'FreshCo', name: 'Chicken Breast', price: '$4.99/lb', category: 'Meat' },
+  ],
+  'United States': [
+    { id: 'u1', storeName: 'Trader Joe\'s', name: 'Organic Bananas', price: '$0.19/ea', category: 'Fruit' },
+    { id: 'u2', storeName: 'Costco', name: 'Rotisserie Chicken', price: '$4.99', category: 'Meat' },
+    { id: 'u3', storeName: 'Kroger', name: 'Gala Apples', price: '$1.49/lb', category: 'Fruit' },
+    { id: 'u4', storeName: 'Whole Foods', name: 'Grass-Fed Beef', price: '$6.99/lb', category: 'Meat' },
+    { id: 'u5', storeName: 'Target', name: 'Paper Towels', price: '$14.99', category: 'Household' },
+    { id: 'u6', storeName: 'Walmart', name: 'Large Eggs', price: '$2.19/dz', category: 'Dairy' },
+  ],
+  'United Kingdom': [
+    { id: 'k1', storeName: 'Tesco', name: 'Semi-Skimmed Milk', price: '£1.45', category: 'Dairy' },
+    { id: 'k2', storeName: 'Sainsbury\'s', name: 'Strawberries', price: '£2.00', category: 'Fruit' },
+    { id: 'k3', storeName: 'Asda', name: 'Cheddar Cheese', price: '£2.50', category: 'Dairy' },
+    { id: 'k4', storeName: 'Waitrose', name: 'Organic Salmon', price: '£4.99', category: 'Meat' },
+    { id: 'k5', storeName: 'Aldi', name: 'Carrots', price: '£0.45', category: 'Vegetables' },
+    { id: 'k6', storeName: 'Lidl', name: 'Sourdough Bread', price: '£1.10', category: 'Bread' },
+  ],
+  'Australia': [
+    { id: 'a1', storeName: 'Woolworths', name: 'Beef Mince', price: '$7.00/kg', category: 'Meat' },
+    { id: 'a2', storeName: 'Coles', name: 'Avocados', price: '$1.50/ea', category: 'Vegetables' },
+    { id: 'a3', storeName: 'Aldi', name: 'Milk 2L', price: '$3.10', category: 'Dairy' },
+    { id: 'a4', storeName: 'IGA', name: 'Tim Tams', price: '$4.00', category: 'Pantry' },
+    { id: 'a5', storeName: 'Costco', name: 'Toilet Paper', price: '$25.99', category: 'Household' },
+    { id: 'a6', storeName: 'Woolworths', name: 'Apples', price: '$4.50/kg', category: 'Fruit' },
+  ]
+};
+
+const getFlyerDeals = () => {
+  const region = localStorage.getItem('shopping_country') || 'Canada';
+  return ALL_DEALS[region] || ALL_DEALS['Canada'];
+};
 
 export default function ShoppingList({
   shoppingList,
@@ -83,13 +114,19 @@ export default function ShoppingList({
   const [editCategory, setEditCategory] = useState('');
 
   const [addedDeals, setAddedDeals] = useState<string[]>([]);
+  const [selectedHistoryItemName, setSelectedHistoryItemName] = useState<string | null>(null);
 
   const [activeStoreTab, setActiveStoreTab] = useState('All');
   const [customStoreTabs, setCustomStoreTabs] = useState<string[]>(['Walmart', 'T&T Supermarket']);
   const [isAddingStoreTab, setIsAddingStoreTab] = useState(false);
   const [newStoreTabName, setNewStoreTabName] = useState('');
+  
+  const suggestedDeals = React.useMemo(() => {
+    if (!newItemName.trim() || newItemName.length < 2) return [];
+    return getFlyerDeals().filter(d => d.name.toLowerCase().includes(newItemName.toLowerCase()));
+  }, [newItemName]);
 
-  const handleAddFlyerDeal = (deal: typeof WEEKLY_FLYER_DEALS[0]) => {
+  const handleAddFlyerDeal = (deal: typeof ALL_DEALS['Canada'][0]) => {
     onAddShoppingItem({ 
       id: Math.random().toString(36).substring(7), 
       name: deal.name, 
@@ -127,14 +164,13 @@ export default function ShoppingList({
     setEditingItemId(null);
   };
 
+  const normalizeItemName = (name: string) => name.replace(/\s+/g, '').toLowerCase();
+
   const priceHistoryText = React.useMemo(() => {
     if (!newItemName.trim() || newItemName.length < 2) return null;
-    const history = purchaseHistory.filter(record => record.name.toLowerCase() === newItemName.trim().toLowerCase());
+    const history = purchaseHistory.filter(record => normalizeItemName(record.name) === normalizeItemName(newItemName));
     if (history.length === 0) return null;
 
-    history.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
-    const lastRecord = history[0];
-    
     let lowestRecord = history[0];
     const getNum = (p: string) => {
        const match = p.match(/\d+(\.\d+)?/);
@@ -147,11 +183,55 @@ export default function ShoppingList({
        }
     });
 
-    if (lastRecord.price === lowestRecord.price && lastRecord.storeName === lowestRecord.storeName) {
-        return `Last bought at ${lastRecord.storeName} for ${lastRecord.price}`;
-    }
-    return `Last bought at ${lastRecord.storeName} for ${lastRecord.price}, lowest record at ${lowestRecord.storeName} for ${lowestRecord.price}`;
+    return `${lowestRecord.price} at ${lowestRecord.storeName}`;
   }, [newItemName, purchaseHistory]);
+
+  const getLowestHistoricalPrice = (itemName: string) => {
+    if (!itemName?.trim() || itemName.length < 2) return null;
+    const history = purchaseHistory.filter(record => normalizeItemName(record.name) === normalizeItemName(itemName));
+    if (history.length === 0) return null;
+
+    let lowestRecord = history[0];
+    const getNum = (p: string) => {
+       const match = p.match(/\d+(\.\d+)?/);
+       return match ? parseFloat(match[0]) : Infinity;
+    };
+    
+    history.forEach(r => {
+       if (getNum(r.price) < getNum(lowestRecord.price)) {
+           lowestRecord = r;
+       }
+    });
+    return lowestRecord;
+  };
+
+  const selectedHistoryData = React.useMemo(() => {
+    if (!selectedHistoryItemName) return { records: [], lowestRecordId: '' };
+    
+    const records = purchaseHistory.filter(record => 
+      normalizeItemName(record.name) === normalizeItemName(selectedHistoryItemName)
+    );
+    
+    records.sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime());
+    
+    const getNum = (p: string) => {
+       const match = p.match(/\d+(\.\d+)?/);
+       return match ? parseFloat(match[0]) : Infinity;
+    };
+    
+    let lowestRecordId = '';
+    if (records.length > 0) {
+      let lowestRecord = records[0];
+      records.forEach(r => {
+        if (getNum(r.price) < getNum(lowestRecord.price)) {
+          lowestRecord = r;
+        }
+      });
+      lowestRecordId = lowestRecord.id;
+    }
+    
+    return { records, lowestRecordId };
+  }, [selectedHistoryItemName, purchaseHistory]);
 
   useEffect(() => {
     if (newItemName.length > 2 && !hasManuallySelectedBuyCategory) {
@@ -201,30 +281,6 @@ export default function ShoppingList({
     }
 
     let finalPrice = newItemPrice.trim();
-    
-    // Auto-fill cheapest price and store if none provided
-    if (!finalPrice || !targetStore) {
-      const history = purchaseHistory.filter(record => record.name.toLowerCase() === newItemName.trim().toLowerCase());
-      if (history.length > 0) {
-        let lowestRecord = history[0];
-        const getNum = (p: string) => {
-           const match = p.match(/\d+(\.\d+)?/);
-           return match ? parseFloat(match[0]) : Infinity;
-        };
-        history.forEach(r => {
-           if (getNum(r.price) < getNum(lowestRecord.price)) {
-               lowestRecord = r;
-           }
-        });
-        
-        if (!finalPrice) {
-          finalPrice = lowestRecord.price;
-        }
-        if (!targetStore && activeStoreTab === 'All') {
-          targetStore = lowestRecord.storeName || '';
-        }
-      }
-    }
 
     const newItem: ShoppingItem = {
       id: Math.random().toString(36).substring(7),
@@ -359,12 +415,10 @@ export default function ShoppingList({
           Weekly Flyer Deals
         </h3>
         <div className="flex gap-3 overflow-x-auto pb-4 pt-1 snap-x scrollbar-hide">
-          {WEEKLY_FLYER_DEALS.map((deal) => (
-            <button
+          {getFlyerDeals().map((deal) => (
+            <div
               key={deal.id}
-              type="button"
-              onClick={() => handleAddFlyerDeal(deal)}
-              className={`snap-start shrink-0 p-3 bg-white border ${addedDeals.includes(deal.id) ? 'border-bamboo-green bg-green-50' : 'border-red-100 hover:border-red-300'} rounded-[16px] text-left min-w-[140px] shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0 text-ink-black flex flex-col gap-1.5`}
+              className={`snap-start shrink-0 p-3 bg-white border ${addedDeals.includes(deal.id) ? 'border-bamboo-green bg-green-50' : 'border-red-100'} rounded-[16px] text-left min-w-[140px] shadow-sm flex flex-col gap-1.5 relative group`}
             >
               <div className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider ${addedDeals.includes(deal.id) ? 'text-bamboo-green' : 'text-red-500'}`}>
                 {addedDeals.includes(deal.id) ? (
@@ -373,9 +427,22 @@ export default function ShoppingList({
                   <><Store className="w-3 h-3" /> {deal.storeName}</>
                 )}
               </div>
-              <div className="font-bold text-sm leading-tight text-ink-black">{deal.name}</div>
+              <div className="font-bold text-sm leading-tight text-ink-black pr-6">{deal.name}</div>
               <div className="text-sm font-bold text-zinc-500 bg-red-50 px-2 py-0.5 rounded-md self-start">{deal.price}</div>
-            </button>
+              
+              <button
+                type="button"
+                onClick={() => handleAddFlyerDeal(deal)}
+                disabled={addedDeals.includes(deal.id)}
+                className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                  addedDeals.includes(deal.id) 
+                    ? 'bg-green-100 text-bamboo-green' 
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:scale-105 active:scale-95'
+                }`}
+              >
+                {addedDeals.includes(deal.id) ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              </button>
+            </div>
           ))}
         </div>
       </section>
@@ -440,13 +507,18 @@ export default function ShoppingList({
 
       {/* Part 1: Quick Add to Buy Form */}
       <section className="mb-10 p-6 bg-zinc-50 rounded-[20px] border border-zinc-100">
-        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-4 flex items-center gap-2">
-          <ShoppingBag className="w-3.5 h-3.5 text-ink-black" />
-          Add Item to {activeStoreTab === 'All' ? 'buy' : activeStoreTab}
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
+            <ShoppingBag className="w-3.5 h-3.5 text-ink-black" />
+            Add Item to {activeStoreTab === 'All' ? 'buy' : activeStoreTab}
+          </h3>
+          <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+            <Crown className="w-3 h-3 text-bamboo-green" /> Lowest historical price tracker
+          </div>
+        </div>
         
         <form onSubmit={handleAddItemToBuy} className="flex flex-col gap-3">
-          <div className="flex flex-col">
+          <div className="flex flex-col relative">
             <input 
               type="text"
               placeholder={`What should we buy${activeStoreTab !== 'All' ? ` at ${activeStoreTab}` : ''}? (e.g., Avocados, Soy sauce)`}
@@ -454,9 +526,37 @@ export default function ShoppingList({
               onChange={(e) => setNewItemName(e.target.value)}
               className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
             />
-            {priceHistoryText && (
+            {suggestedDeals.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-[12px] shadow-lg z-20 overflow-hidden">
+                {suggestedDeals.map(deal => (
+                  <button
+                    key={deal.id}
+                    type="button"
+                    onClick={() => {
+                      handleAddFlyerDeal(deal);
+                      setNewItemName('');
+                    }}
+                    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-zinc-50 border-b border-zinc-100 last:border-0 transition-colors"
+                  >
+                    <div>
+                      <div className="font-bold text-sm text-ink-black flex items-center gap-2">
+                        {deal.name}
+                        <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">{deal.price}</span>
+                      </div>
+                      <div className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
+                        <Store className="w-3 h-3" /> {deal.storeName}
+                      </div>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {priceHistoryText && !suggestedDeals.length && (
               <span className="text-[10px] text-zinc-500 font-medium px-2 pt-1.5 flex items-center gap-1">
-                <Tag className="w-3 h-3 text-bamboo-green" /> {priceHistoryText}
+                <Crown className="w-3 h-3 text-bamboo-green" /> {priceHistoryText}
               </span>
             )}
           </div>
@@ -605,12 +705,20 @@ export default function ShoppingList({
                                     {getCategoryIcon(item.category)}
                                     {item.category}
                                   </span>
-                                  {item.price && (
-                                    <span className="text-[10px] font-bold tracking-wider text-bamboo-green flex items-center gap-1 bg-green-50 border border-green-100 rounded-md px-1.5 py-0.5 w-fit">
+                                  {item.price ? (
+                                    <span className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] border border-[#f0fdf4] rounded-md px-1.5 py-0.5 w-fit">
                                       <DollarSign className="w-2.5 h-2.5" />
                                       {item.price}
                                     </span>
-                                  )}
+                                  ) : getLowestHistoricalPrice(item.name) ? (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setSelectedHistoryItemName(item.name); }}
+                                      className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] border border-[#f0fdf4] hover:bg-[#e0eedf] transition-colors rounded-md px-1.5 py-0.5 w-fit cursor-pointer"
+                                    >
+                                      <Crown className="w-2.5 h-2.5" />
+                                      {getLowestHistoricalPrice(item.name)?.price} at {getLowestHistoricalPrice(item.name)?.storeName}
+                                    </button>
+                                  ) : null}
                                 </div>
                               </div>
                               {item.amount && (
@@ -924,6 +1032,79 @@ export default function ShoppingList({
                     Save Changes
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedHistoryItemName && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setSelectedHistoryItemName(null)}
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl border border-zinc-100 overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-light text-ink-black">{selectedHistoryItemName} <span className="font-semibold text-zinc-400">History</span></h3>
+                </div>
+                <button 
+                  onClick={() => setSelectedHistoryItemName(null)}
+                  className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center hover:bg-zinc-100 transition-colors"
+                >
+                  <Plus className="w-5 h-5 text-zinc-400 rotate-45" />
+                </button>
+              </div>
+              <div className="p-6 max-h-[60vh] overflow-y-auto no-scrollbar bg-zinc-50/50">
+                {selectedHistoryData.records.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedHistoryData.records.map((record) => (
+                      <div 
+                        key={record.id} 
+                        className={`p-4 rounded-[16px] border ${record.id === selectedHistoryData.lowestRecordId ? 'bg-green-50/50 border-[#f0fdf4]' : 'bg-white border-zinc-100'} flex justify-between items-center`}
+                      >
+                         <div>
+                           <div className="flex items-center gap-2 mb-1">
+                             <h4 className="text-sm font-semibold text-ink-black">{record.storeName}</h4>
+                             {record.id === selectedHistoryData.lowestRecordId && (
+                               <span className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] px-1.5 py-0.5 rounded border border-[#f0fdf4]">
+                                 <Crown className="w-3 h-3" /> BEST PRICE
+                               </span>
+                             )}
+                           </div>
+                           <div className="flex items-center gap-3 text-xs text-zinc-500 font-medium">
+                             <div className="flex items-center gap-1">
+                               <Calendar className="w-3.5 h-3.5" />
+                               {record.purchaseDate}
+                             </div>
+                           </div>
+                         </div>
+                         <div className="text-right flex flex-col items-end">
+                           <div className="text-lg text-[#2c8c2c] font-light">
+                             {record.price}
+                           </div>
+                           {record.quantityBought && record.quantityBought !== '1' && (
+                             <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1">
+                               / {record.quantityBought}
+                             </div>
+                           )}
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-zinc-500 text-sm">No history found.</div>
+                )}
               </div>
             </motion.div>
           </div>

@@ -21,6 +21,34 @@ import { collection, doc, setDoc, deleteDoc, onSnapshot, query, serverTimestamp,
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('inventory');
+  const [viewHistory, setViewHistory] = useState<View[]>(['inventory']);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const handleViewChange = (newView: View) => {
+    setViewHistory(prev => {
+      const idx = historyIndex;
+      const newHistory = prev.slice(0, idx + 1);
+      return [...newHistory, newView];
+    });
+    setHistoryIndex(prev => prev + 1);
+    setCurrentView(newView);
+  };
+
+  const handleGoBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setCurrentView(viewHistory[newIndex]);
+    }
+  };
+
+  const handleGoForward = () => {
+    if (historyIndex < viewHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setCurrentView(viewHistory[newIndex]);
+    }
+  };
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
@@ -612,6 +640,33 @@ export default function App() {
     }
   };
 
+  // Swipe gesture state
+  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const dx = touchEndX - touchStart.x;
+    const dy = touchEndY - touchStart.y;
+    
+    // Check if swipe is mostly horizontal
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx > 0 && touchStart.x < 50) {
+        // Swipe right from the left edge
+        handleGoBack();
+      } else if (dx < 0 && touchStart.x > window.innerWidth - 50) {
+        // Swipe left from the right edge
+        handleGoForward();
+      }
+    }
+    setTouchStart(null);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -625,11 +680,15 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main 
+      className="min-h-screen bg-white"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="relative z-10">
         <TopBar 
           currentView={currentView} 
-          onViewChange={setCurrentView} 
+          onViewChange={handleViewChange} 
           inventory={inventory} 
           shoppingList={shoppingList} 
         />
@@ -663,10 +722,20 @@ export default function App() {
         </AnimatePresence>
 
         <div className="relative pt-4">
-          {renderView()}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0, x: -15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 15 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderView()}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <BottomNav currentView={currentView} onViewChange={setCurrentView} />
+        <BottomNav currentView={currentView} onViewChange={handleViewChange} />
       </div>
     </main>
   );

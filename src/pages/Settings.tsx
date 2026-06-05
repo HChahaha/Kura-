@@ -10,7 +10,7 @@ interface SettingsProps {
   user: any;
 }
 
-type Section = 'main' | 'profile' | 'notifications' | 'privacy' | 'appearance';
+type Section = 'main' | 'profile' | 'notifications' | 'privacy' | 'appearance' | 'location';
 
 export default function Settings({ onViewChange, user }: SettingsProps) {
   const [activeSection, setActiveSection] = useState<Section>('main');
@@ -37,7 +37,28 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
     return document.documentElement.classList.contains('dark') ? 'Dark Mode' : 'Light Mode';
   });
 
+  const [country, setCountry] = useState(() => {
+    return localStorage.getItem('shopping_country') || 'Canada';
+  });
+  const [province, setProvince] = useState(() => {
+    return localStorage.getItem('shopping_province') || 'British Columbia';
+  });
+  const [city, setCity] = useState(() => {
+    return localStorage.getItem('shopping_city') || 'Vancouver';
+  });
+  const [postalCode, setPostalCode] = useState(() => {
+    return localStorage.getItem('shopping_postal') || '';
+  });
+
   const appearances = ['Light Mode', 'Dark Mode'];
+  const countries = ['Canada', 'United States', 'United Kingdom', 'Australia'];
+  
+  const provincesByCountry: Record<string, string[]> = {
+    'Canada': ['Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador', 'Nova Scotia', 'Ontario', 'Prince Edward Island', 'Quebec', 'Saskatchewan'],
+    'United States': ['California', 'New York', 'Texas', 'Florida', 'Illinois', 'Pennsylvania', 'Ohio', 'Georgia', 'North Carolina', 'Michigan', 'Washington'],
+    'United Kingdom': ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+    'Australia': ['New South Wales', 'Victoria', 'Queensland', 'Western Australia', 'South Australia', 'Tasmania']
+  };
 
   const toggleAppearance = (app: string) => {
     setAppearance(app);
@@ -78,6 +99,7 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
 
   const menuItems = [
     { id: 'profile', icon: User, label: 'Profile Settings', sub: 'Edit your name and avatar' },
+    { id: 'location', icon: Globe, label: 'Location & Region', sub: `${city || province}, ${country}` },
     { id: 'notifications', icon: Bell, label: 'Notifications', sub: 'Meal reminders and expiry alerts' },
     { id: 'privacy', icon: Shield, label: 'Privacy & Security', sub: 'Manage your data' },
     { id: 'appearance', icon: Moon, label: 'Appearance', sub: appearance },
@@ -327,6 +349,102 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
                   {appearance === app && <Check className="w-5 h-5 text-bamboo-green" />}
                 </div>
               ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* LOCATION SECTION */}
+        {activeSection === 'location' && (
+          <motion.div
+            key="location"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+          >
+            <header className="mb-8 flex items-center gap-4">
+              <button 
+                onClick={() => setActiveSection('main')}
+                className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-500 hover:text-ink-black transition-colors border border-zinc-100"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="text-2xl font-light tracking-tight">Location & Region</h1>
+            </header>
+
+            <div className="space-y-4 mb-8">
+              <p className="text-xs text-zinc-500 mb-4 px-2">Localize store deals and recommendations.</p>
+              
+              <div className="flex flex-col gap-2">
+                <label className="px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Country</label>
+                <div className="relative">
+                  <select
+                    value={country}
+                    onChange={(e) => {
+                      const newCountry = e.target.value;
+                      setCountry(newCountry);
+                      localStorage.setItem('shopping_country', newCountry);
+                      const defaultProv = provincesByCountry[newCountry]?.[0] || '';
+                      setProvince(defaultProv);
+                      localStorage.setItem('shopping_province', defaultProv);
+                    }}
+                    className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-zinc-400 appearance-none"
+                  >
+                    {countries.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronRight className="w-4 h-4 text-zinc-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                </div>
+              </div>
+
+              {provincesByCountry[country] && (
+                <div className="flex flex-col gap-2">
+                  <label className="px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Province / State</label>
+                  <div className="relative">
+                    <select
+                      value={province}
+                      onChange={(e) => {
+                        setProvince(e.target.value);
+                        localStorage.setItem('shopping_province', e.target.value);
+                      }}
+                      className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-zinc-400 appearance-none"
+                    >
+                      {provincesByCountry[country].map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                    <ChevronRight className="w-4 h-4 text-zinc-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <label className="px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">City</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Vancouver"
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    localStorage.setItem('shopping_city', e.target.value);
+                  }}
+                  className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-zinc-400"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Postal / Zip Code</label>
+                <input
+                  type="text"
+                  placeholder="Optional"
+                  value={postalCode}
+                  onChange={(e) => {
+                    setPostalCode(e.target.value);
+                    localStorage.setItem('shopping_postal', e.target.value);
+                  }}
+                  className="w-full p-4 bg-white border border-zinc-200 rounded-2xl text-sm font-medium focus:outline-none focus:border-zinc-400"
+                />
+              </div>
             </div>
           </motion.div>
         )}

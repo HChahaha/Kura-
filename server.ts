@@ -95,7 +95,25 @@ app.post("/api/parse-recipe", async (req, res) => {
       },
     });
 
-    res.json(JSON.parse(response.text));
+    let text = response.text || "{}";
+    // Strip markdown formatting if Gemini wrapped the response
+    text = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+    
+    // Find the first { and last } to ensure we only parse the JSON object
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      text = text.substring(startIndex, endIndex + 1);
+    }
+    
+    let parsedData = {};
+    try {
+      parsedData = JSON.parse(text);
+    } catch (e) {
+      console.error("JSON parse failed. Raw text:", text);
+    }
+
+    res.json(parsedData);
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     res.status(500).json({ error: error.message || "Failed to parse recipe" });

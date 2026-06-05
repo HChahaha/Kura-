@@ -69,24 +69,27 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
 
       const data = await res.json();
       
-      if (data.title) setName(data.title);
-      if (data.time) setPrepTime(data.time.replace(/\D/g, '') || data.time);
-      if (data.calories) setCalories(data.calories.toString());
-      if (data.difficulty) setDifficulty(data.difficulty);
-      if (data.servings) setServings(data.servings.toString());
+      if (data?.title) setName(data.title);
+      if (data?.time) {
+        const timeStr = String(data.time).replace(/\D/g, '');
+        setPrepTime(timeStr || String(data.time));
+      }
+      if (data?.calories) setCalories(String(data.calories));
+      if (data?.difficulty) setDifficulty(data.difficulty);
+      if (data?.servings) setServings(String(data.servings));
       
-      if (data.ingredients && Array.isArray(data.ingredients)) {
+      if (data?.ingredients && Array.isArray(data.ingredients)) {
         setIngredients(data.ingredients.map((ing: any) => ({
           id: Math.random().toString(36).substring(7),
-          name: ing.name || '',
-          quantity: ing.quantity || ''
+          name: ing?.name || '',
+          quantity: String(ing?.quantity || '')
         })));
       }
       
-      if (data.instructions && Array.isArray(data.instructions)) {
-        setSteps(data.instructions.map((step: string) => ({
+      if (data?.instructions && Array.isArray(data.instructions)) {
+        setSteps(data.instructions.map((step: any) => ({
           id: Math.random().toString(36).substring(7),
-          text: step
+          text: String(step?.text || step || '')
         })));
       }
 

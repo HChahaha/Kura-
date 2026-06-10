@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, Clock, Plus, Trash2, Check, CheckCircle2, Search, ArrowRight, BookOpen, Smile, Info, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags } from 'lucide-react';
-import { InventoryItem, View } from '../types';
+import { AlertTriangle, Clock, Plus, Trash2, Check, CheckCircle2, Search, ArrowRight, BookOpen, Smile, Info, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Camera, Receipt, CheckSquare } from 'lucide-react';
+import { InventoryItem, View, PurchaseRecord } from '../types';
 
 interface InventoryProps {
   inventory: InventoryItem[];
   categories: string[];
+  purchaseHistory?: PurchaseRecord[];
   onSelectItem: (id: string) => void;
   onViewChange: (view: View) => void;
   onUpdateInventory: (items: InventoryItem[]) => void;
+  onAddPurchaseRecord?: (record: PurchaseRecord) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -28,13 +30,126 @@ const getCategoryIcon = (category: string) => {
 export default function Inventory({ 
   inventory, 
   categories, 
+  purchaseHistory,
   onSelectItem, 
   onViewChange,
-  onUpdateInventory 
+  onUpdateInventory,
+  onAddPurchaseRecord
 }: InventoryProps) {
   const [selectedCategory, setSelectedCategory] = useState('All Items');
   const [inventorySearchQuery, setInventorySearchQuery] = useState('');
   
+  const [isScanningFood, setIsScanningFood] = useState(false);
+  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+  const [receiptResult, setReceiptResult] = useState<any>(null);
+  
+  const handleScanFood = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningFood(true);
+    try {
+      const reader = new FileReader();
+      const base64Data = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/scan-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64Data, mimeType: file.type })
+      });
+      if (!res.ok) throw new Error("Failed to scan food");
+      const data = await res.json();
+      if (data.name) {
+         const newItem: InventoryItem = {
+           id: Math.random().toString(36).substring(7),
+           name: data.name,
+           category: data.category || 'Produce',
+           location: 'Fridge',
+           quantity: '1',
+           purchaseDate: new Date().toISOString().split('T')[0]
+         };
+         onUpdateInventory([...inventory, newItem]);
+         alert(`Added ${data.name} to inventory!`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error scanning food.');
+    } finally {
+      setIsScanningFood(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningReceipt(true);
+    setReceiptResult(null);
+    try {
+      const reader = new FileReader();
+      const base64Data = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64Data, mimeType: file.type })
+      });
+      if (!res.ok) throw new Error("Failed to scan receipt");
+      const data = await res.json();
+      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        setReceiptResult(data);
+      } else {
+        alert("Could not identify any grocery items from this receipt.");
+      }
+    } catch (err) {
+       console.error(err);
+       alert('Error scanning receipt.');
+    } finally {
+      setIsScanningReceipt(false);
+      e.target.value = '';
+    }
+  };
+
+  const confirmReceiptImport = () => {
+    if (!receiptResult || !receiptResult.items) return;
+    const items = receiptResult.items;
+    
+    // Add to specific log history and inventory simultaneously
+    let newInv = [...inventory];
+    
+    items.forEach((item: any) => {
+      // add to inventory
+      const newItem: InventoryItem = {
+        id: Math.random().toString(36).substring(7),
+        name: item.name,
+        category: 'Produce', // general fallback
+        location: 'Fridge',
+        quantity: item.quantity || '1',
+        purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0]
+      };
+      newInv.push(newItem);
+      
+      // add to purchase history
+      if (onAddPurchaseRecord) {
+        onAddPurchaseRecord({
+          id: Math.random().toString(36).substring(7),
+          name: item.name,
+          category: 'Produce',
+          storeName: receiptResult.storeName || 'Unknown Store',
+          price: (item.price !== undefined && item.price !== null) ? `$${parseFloat(item.price).toFixed(2)}` : 'Unspecified',
+          purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0],
+          quantityBought: String(item.quantity || '1')
+        });
+      }
+    });
+    onUpdateInventory(newInv);
+    setReceiptResult(null);
+    alert(`Imported ${items.length} items from ${receiptResult.storeName || 'receipt'}!`);
+  };
+
   const allCategories = ['All Items', ...categories];
 
   // Dynamic status-based message helper
@@ -330,17 +445,101 @@ export default function Inventory({
       </section>
 
       {/* Manual Entry Button */}
-      <section className="mt-14">
+      <section className="mt-14 space-y-4">
         <button 
           onClick={() => onViewChange('add-item')}
           className="w-full py-8 border border-dashed border-zinc-200 rounded-[20px] flex items-center justify-center gap-2.5 text-zinc-400 hover:text-ink-black hover:border-zinc-400 transition-all font-sans group"
         >
           <div className="w-7 h-7 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:bg-ink-black group-hover:text-white transition-all">
-            <Plus className="w-4.5 h-4.5" />
+             <Plus className="w-4.5 h-4.5" />
           </div>
           <span className="text-xs font-bold uppercase tracking-[0.2em]">Add Fresh Ingredient</span>
         </button>
+
+        <div className="grid grid-cols-2 gap-4">
+          <label className="w-full py-6 border border-dashed border-indigo-200 bg-indigo-50/10 rounded-[20px] flex items-center justify-center gap-2.5 text-indigo-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all font-sans group cursor-pointer relative overflow-hidden">
+             <input type="file" accept="image/*" onChange={handleScanFood} className="hidden" disabled={isScanningFood} />
+             {isScanningFood ? (
+                <div className="flex items-center gap-2.5">
+                   <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500">Scanning...</span>
+                </div>
+             ) : (
+                <div className="flex items-center gap-2.5">
+                   <Camera className="w-4.5 h-4.5" />
+                   <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Scan Food</span>
+                </div>
+             )}
+          </label>
+
+          <label className="w-full py-6 border border-dashed border-emerald-200 bg-emerald-50/10 rounded-[20px] flex items-center justify-center gap-2.5 text-emerald-500 hover:text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all font-sans group cursor-pointer relative overflow-hidden">
+             <input type="file" accept="image/*" onChange={handleScanReceipt} className="hidden" disabled={isScanningReceipt} />
+             {isScanningReceipt ? (
+                <div className="flex items-center gap-2.5">
+                   <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Scanning...</span>
+                </div>
+             ) : (
+                <div className="flex items-center gap-2.5">
+                   <Receipt className="w-4.5 h-4.5" />
+                   <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Scan Receipt</span>
+                </div>
+             )}
+          </label>
+        </div>
       </section>
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {receiptResult && (
+          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-white w-full max-w-md rounded-t-[28px] sm:rounded-[20px] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+                <div>
+                   <h3 className="text-xl font-bold text-ink-black flex items-center gap-2">
+                     <CheckSquare className="w-5 h-5 text-emerald-500" />
+                     {receiptResult.storeName || "Receipt Result"}
+                   </h3>
+                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{receiptResult.date || "Unknown Date"} • {receiptResult.items?.length || 0} items</span>
+                </div>
+                <button 
+                  onClick={() => setReceiptResult(null)}
+                  className="p-1.5 text-zinc-400 hover:text-ink-black transition-colors shrink-0"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 space-y-4 font-sans max-h-[50vh]">
+                 {receiptResult.items?.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between bg-zinc-50 border border-zinc-100 p-3 rounded-xl">
+                       <div className="min-w-0 pr-4 flex-1">
+                          <h4 className="font-semibold text-sm text-ink-black truncate">{item.name}</h4>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{item.quantity}</span>
+                       </div>
+                       <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0">
+                          {item.price !== undefined ? `$${item.price}` : 'Unknown'}
+                       </span>
+                    </div>
+                 ))}
+              </div>
+              <div className="p-6 border-t border-zinc-100">
+                <button 
+                  onClick={confirmReceiptImport}
+                  className="w-full py-4 bg-ink-black text-white rounded-[16px] text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-sm"
+                >
+                  Import {receiptResult.items?.length} Items
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

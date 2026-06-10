@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Camera, Plus, X, List, Clock, ChefHat, Sparkles, Brain, Link, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, Plus, X, List, Clock, ChefHat, Sparkles, Brain, Link, Image as ImageIcon, Loader2, ChevronDown } from 'lucide-react';
 import { View } from '../types';
 
 interface AddRecipeProps {
@@ -31,16 +31,19 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
   const [protein, setProtein] = useState(recipeToEdit?.protein || '20g');
   const [fat, setFat] = useState(recipeToEdit?.fat || '10g');
   const [carbs, setCarbs] = useState(recipeToEdit?.carbs || '40g');
+  const [isNutritionExpanded, setIsNutritionExpanded] = useState(false);
 
   // AI Import State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiUrl, setAiUrl] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [isAiFilled, setIsAiFilled] = useState(false);
 
   const parseAiRecipe = async (type: 'url' | 'image', payload: { url?: string; file?: File }) => {
     setIsAiLoading(true);
     setAiError('');
+    setIsAiFilled(false);
     try {
       let requestBody: any = { inputType: type };
       
@@ -98,6 +101,8 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
       }
 
       setIsAiModalOpen(false);
+      setIsAiFilled(true);
+      setTimeout(() => setIsAiFilled(false), 2000);
     } catch (err: any) {
       setAiError(err.message || 'An error occurred during parsing.');
     } finally {
@@ -238,18 +243,6 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-2">Calories (kcal)</label>
-                  <input 
-                    type="number" 
-                    value={calories}
-                    onChange={(e) => setCalories(e.target.value)}
-                    className="w-full bg-transparent text-xl font-light text-ink-black focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8 pt-4 border-t border-zinc-100">
-                <div>
                   <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-2">Servings</label>
                   <input 
                     type="number" 
@@ -258,6 +251,9 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
                     className="w-full bg-transparent text-xl font-light text-ink-black focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100">
                 <div>
                   <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-2">Difficulty</label>
                   <select 
@@ -273,45 +269,79 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
               </div>
 
               <div className="pt-4 border-t border-zinc-100">
-                <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-4">Macronutrients</span>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Protein</label>
-                    <input 
-                      type="text" 
-                      value={protein}
-                      onChange={(e) => setProtein(e.target.value)}
-                      placeholder="e.g. 20g"
-                      className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Fat</label>
-                    <input 
-                      type="text" 
-                      value={fat}
-                      onChange={(e) => setFat(e.target.value)}
-                      placeholder="e.g. 10g"
-                      className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Carbs</label>
-                    <input 
-                      type="text" 
-                      value={carbs}
-                      onChange={(e) => setCarbs(e.target.value)}
-                      placeholder="e.g. 40g"
-                      className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
-                    />
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsNutritionExpanded(!isNutritionExpanded)}
+                  className="w-full flex items-center justify-between text-left text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 hover:text-ink-black transition-colors"
+                >
+                  <span className="flex items-center gap-1.5"><span className="text-base">💡</span> Track Nutrition (Optional)</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isNutritionExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {isNutritionExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden space-y-6 pt-6"
+                    >
+                      <div>
+                        <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-2">Calories (kcal)</label>
+                        <input 
+                          type="number" 
+                          value={calories}
+                          onChange={(e) => setCalories(e.target.value)}
+                          className="w-full bg-transparent text-xl font-light text-ink-black focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-300 block mb-4">Macronutrients</span>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Protein</label>
+                            <input 
+                              type="text" 
+                              value={protein}
+                              onChange={(e) => setProtein(e.target.value)}
+                              placeholder="e.g. 20g"
+                              className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Fat</label>
+                            <input 
+                              type="text" 
+                              value={fat}
+                              onChange={(e) => setFat(e.target.value)}
+                              placeholder="e.g. 10g"
+                              className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[7px] font-bold uppercase tracking-[0.1em] text-zinc-300 block mb-2">Carbs</label>
+                            <input 
+                              type="text" 
+                              value={carbs}
+                              onChange={(e) => setCarbs(e.target.value)}
+                              placeholder="e.g. 40g"
+                              className="w-full bg-transparent text-sm font-medium text-ink-black focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
 
           {/* Content Column */}
-          <div className="lg:col-span-7 space-y-16">
+          <motion.div 
+            animate={isAiFilled ? { scale: [1, 1.01, 1], filter: ['brightness(1)', 'brightness(1.05)', 'brightness(1)'] } : {}}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className={`lg:col-span-7 space-y-16 p-6 -m-6 rounded-3xl transition-colors duration-1000 ${isAiFilled ? 'bg-indigo-50/30' : 'bg-transparent'}`}
+          >
             <section>
               <input 
                 type="text"
@@ -398,7 +428,7 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
                 ))}
               </div>
             </section>
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -442,11 +472,16 @@ export default function AddRecipe({ onViewChange, onSaveRecipe, recipeToEdit }: 
                 <X className="w-5 h-5" />
               </button>
               
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-4">
                 <Brain className="w-6 h-6 text-indigo-500" />
                 <h2 className="text-xl font-light text-ink-black">AI Recipe Import</h2>
               </div>
-              <p className="text-xs text-zinc-500 font-medium mb-8">Paste a recipe URL or upload a screenshot to automatically extract ingredients and instructions.</p>
+              <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex items-start gap-2 mb-8">
+                <span className="text-base leading-none mt-0.5">💡</span>
+                <p className="text-xs text-indigo-900 font-medium leading-relaxed">
+                  <strong>How to use:</strong> Found a cool recipe on Instagram or a blog? Paste the URL link or upload a screenshot here! Our AI will automatically fill in the ingredients and cooking steps for you below.
+                </p>
+              </div>
 
               {aiError && (
                 <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-600 text-xs font-medium border border-red-100 flex items-start gap-2">

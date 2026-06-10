@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown, Camera, Receipt, CheckSquare } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
 import { getNormalShelfLife, suggestCategory } from '../lib/imageUtils';
 
@@ -36,36 +36,36 @@ const UNITS = ['g', 'kg', 'lbs', 'ml', 'l', 'pcs', 'packs', 'cups', 'spoons', 'c
 
 const ALL_DEALS: Record<string, any[]> = {
   'Canada': [
-    { id: 'f1', storeName: 'T&T Supermarket', name: 'Pork Ribs', price: '$2.99/lb', category: 'Meat' },
-    { id: 'f2', storeName: 'T&T Supermarket', name: 'Napa Cabbage', price: '$0.99/lb', category: 'Vegetables' },
-    { id: 'f3', storeName: 'Costco', name: 'Toilet Paper', price: '$19.99', category: 'Household' },
-    { id: 'f4', storeName: 'Walmart', name: '2% Milk (4L)', price: '$5.49', category: 'Dairy' },
-    { id: 'f5', storeName: 'Superstore', name: 'Avocados (Bag)', price: '$3.99', category: 'Vegetables' },
-    { id: 'f6', storeName: 'FreshCo', name: 'Chicken Breast', price: '$4.99/lb', category: 'Meat' },
+    { id: 'f1', storeName: 'T&T Supermarket', brand: 'Farm Fresh', name: 'Pork Ribs', price: '$2.99/lb', category: 'Meat' },
+    { id: 'f2', storeName: 'T&T Supermarket', brand: 'Local', name: 'Napa Cabbage', price: '$0.99/lb', category: 'Vegetables' },
+    { id: 'f3', storeName: 'Costco', brand: 'Kirkland Signature', name: 'Toilet Paper', price: '$19.99', category: 'Household' },
+    { id: 'f4', storeName: 'Walmart', brand: 'Lucerne', name: '2% Milk', price: '$5.49', category: 'Dairy' },
+    { id: 'f5', storeName: 'Superstore', brand: 'No Name', name: 'Avocados (Bag)', price: '$3.99', category: 'Vegetables' },
+    { id: 'f6', storeName: 'FreshCo', brand: 'Maple Leaf', name: 'Chicken Breast', price: '$4.99/lb', category: 'Meat' },
   ],
   'United States': [
-    { id: 'u1', storeName: 'Trader Joe\'s', name: 'Organic Bananas', price: '$0.19/ea', category: 'Fruit' },
-    { id: 'u2', storeName: 'Costco', name: 'Rotisserie Chicken', price: '$4.99', category: 'Meat' },
-    { id: 'u3', storeName: 'Kroger', name: 'Gala Apples', price: '$1.49/lb', category: 'Fruit' },
-    { id: 'u4', storeName: 'Whole Foods', name: 'Grass-Fed Beef', price: '$6.99/lb', category: 'Meat' },
-    { id: 'u5', storeName: 'Target', name: 'Paper Towels', price: '$14.99', category: 'Household' },
-    { id: 'u6', storeName: 'Walmart', name: 'Large Eggs', price: '$2.19/dz', category: 'Dairy' },
+    { id: 'u1', storeName: 'Trader Joe\'s', brand: 'Trader Joe\'s', name: 'Organic Bananas', price: '$0.19/ea', category: 'Fruit' },
+    { id: 'u2', storeName: 'Costco', brand: 'Kirkland', name: 'Rotisserie Chicken', price: '$4.99', category: 'Meat' },
+    { id: 'u3', storeName: 'Kroger', brand: 'Simple Truth', name: 'Gala Apples', price: '$1.49/lb', category: 'Fruit' },
+    { id: 'u4', storeName: 'Whole Foods', brand: '365', name: 'Grass-Fed Beef', price: '$6.99/lb', category: 'Meat' },
+    { id: 'u5', storeName: 'Target', brand: 'Up&Up', name: 'Paper Towels', price: '$14.99', category: 'Household' },
+    { id: 'u6', storeName: 'Walmart', brand: 'Great Value', name: 'Large Eggs', price: '$2.19/dz', category: 'Dairy' },
   ],
   'United Kingdom': [
-    { id: 'k1', storeName: 'Tesco', name: 'Semi-Skimmed Milk', price: '£1.45', category: 'Dairy' },
-    { id: 'k2', storeName: 'Sainsbury\'s', name: 'Strawberries', price: '£2.00', category: 'Fruit' },
-    { id: 'k3', storeName: 'Asda', name: 'Cheddar Cheese', price: '£2.50', category: 'Dairy' },
-    { id: 'k4', storeName: 'Waitrose', name: 'Organic Salmon', price: '£4.99', category: 'Meat' },
-    { id: 'k5', storeName: 'Aldi', name: 'Carrots', price: '£0.45', category: 'Vegetables' },
-    { id: 'k6', storeName: 'Lidl', name: 'Sourdough Bread', price: '£1.10', category: 'Bread' },
+    { id: 'k1', storeName: 'Tesco', brand: 'Tesco', name: 'Semi-Skimmed Milk', price: '£1.45', category: 'Dairy' },
+    { id: 'k2', storeName: 'Sainsbury\'s', brand: 'Taste the Difference', name: 'Strawberries', price: '£2.00', category: 'Fruit' },
+    { id: 'k3', storeName: 'Asda', brand: 'Asda', name: 'Cheddar Cheese', price: '£2.50', category: 'Dairy' },
+    { id: 'k4', storeName: 'Waitrose', brand: 'Duchy Organic', name: 'Organic Salmon', price: '£4.99', category: 'Meat' },
+    { id: 'k5', storeName: 'Aldi', brand: 'Nature\'s Pick', name: 'Carrots', price: '£0.45', category: 'Vegetables' },
+    { id: 'k6', storeName: 'Lidl', brand: 'Rowan Hill', name: 'Sourdough Bread', price: '£1.10', category: 'Bread' },
   ],
   'Australia': [
-    { id: 'a1', storeName: 'Woolworths', name: 'Beef Mince', price: '$7.00/kg', category: 'Meat' },
-    { id: 'a2', storeName: 'Coles', name: 'Avocados', price: '$1.50/ea', category: 'Vegetables' },
-    { id: 'a3', storeName: 'Aldi', name: 'Milk 2L', price: '$3.10', category: 'Dairy' },
-    { id: 'a4', storeName: 'IGA', name: 'Tim Tams', price: '$4.00', category: 'Pantry' },
-    { id: 'a5', storeName: 'Costco', name: 'Toilet Paper', price: '$25.99', category: 'Household' },
-    { id: 'a6', storeName: 'Woolworths', name: 'Apples', price: '$4.50/kg', category: 'Fruit' },
+    { id: 'a1', storeName: 'Woolworths', brand: 'Woolworths', name: 'Beef Mince', price: '$7.00/kg', category: 'Meat' },
+    { id: 'a2', storeName: 'Coles', brand: 'Coles', name: 'Avocados', price: '$1.50/ea', category: 'Vegetables' },
+    { id: 'a3', storeName: 'Aldi', brand: 'Farmdale', name: 'Milk 2L', price: '$3.10', category: 'Dairy' },
+    { id: 'a4', storeName: 'IGA', brand: 'Arnott\'s', name: 'Tim Tams', price: '$4.00', category: 'Pantry' },
+    { id: 'a5', storeName: 'Costco', brand: 'Kirkland Signature', name: 'Toilet Paper', price: '$25.99', category: 'Household' },
+    { id: 'a6', storeName: 'Woolworths', brand: 'Odd Bunch', name: 'Apples', price: '$4.50/kg', category: 'Fruit' },
   ]
 };
 
@@ -88,12 +88,77 @@ export default function ShoppingList({
   onViewChange
 }: ShoppingListProps) {
   const [newItemName, setNewItemName] = useState('');
-  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('1');
   const [newItemPrice, setNewItemPrice] = useState('');
   const [newStoreName, setNewStoreName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Pantry');
   const [searchHistoryQuery, setSearchHistoryQuery] = useState('');
   
+  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
+  const [receiptResult, setReceiptResult] = useState<any>(null);
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsScanningReceipt(true);
+    setReceiptResult(null);
+    try {
+      const reader = new FileReader();
+      const base64Data = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64Data, mimeType: file.type })
+      });
+      if (!res.ok) throw new Error("Failed to scan receipt");
+      const data = await res.json();
+      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+        setReceiptResult(data);
+      } else {
+        alert("Could not identify any grocery items from this receipt.");
+      }
+    } catch (err) {
+       console.error(err);
+       alert('Error scanning receipt.');
+    } finally {
+      setIsScanningReceipt(false);
+      e.target.value = '';
+    }
+  };
+
+  const confirmReceiptImport = () => {
+    if (!receiptResult || !receiptResult.items) return;
+    const items = receiptResult.items;
+    
+    items.forEach((item: any) => {
+      // Add directly to inventory
+      onAddToInventory({
+        name: item.name,
+        category: 'Produce', // fallback
+        location: 'Fridge',
+        quantity: item.quantity || '1',
+        purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0]
+      });
+      
+      // log to price history tracker
+      onAddPurchaseRecord({
+        id: Math.random().toString(36).substring(7),
+        name: item.name,
+        category: 'Produce',
+        storeName: receiptResult.storeName || 'Unknown Store',
+        price: (item.price !== undefined && item.price !== null) ? `$${parseFloat(item.price).toFixed(2)}` : 'Unspecified',
+        purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0],
+        quantityBought: String(item.quantity || '1')
+      });
+    });
+    
+    setReceiptResult(null);
+    alert(`Imported ${items.length} items from ${receiptResult.storeName || 'receipt'} directly to Inventory & Price History!`);
+  };
+
   // Custom purchase details state
   const [activeCompletingItem, setActiveCompletingItem] = useState<ShoppingItem | null>(null);
   const [editingHistoryItem, setEditingHistoryItem] = useState<PurchaseRecord | null>(null);
@@ -108,7 +173,7 @@ export default function ShoppingList({
   const [hasManuallySelectedBuyCategory, setHasManuallySelectedBuyCategory] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editItemName, setEditItemName] = useState('');
-  const [editItemAmount, setEditItemAmount] = useState('');
+  const [editItemAmount, setEditItemAmount] = useState('1');
   const [editItemPrice, setEditItemPrice] = useState('');
   const [editStoreName, setEditStoreName] = useState('');
   const [editCategory, setEditCategory] = useState('');
@@ -145,7 +210,7 @@ export default function ShoppingList({
   const startEditingItem = (item: ShoppingItem) => {
     setEditingItemId(item.id);
     setEditItemName(item.name);
-    setEditItemAmount(item.amount || '');
+    setEditItemAmount(item.amount || '1');
     setEditItemPrice(item.price || '');
     setEditStoreName(item.storeName || '');
     setEditCategory(item.category);
@@ -299,7 +364,7 @@ export default function ShoppingList({
 
     onAddShoppingItem(newItem);
     setNewItemName('');
-    setNewItemAmount('');
+    setNewItemAmount('1');
     setNewItemPrice('');
     setNewStoreName('');
     setHasManuallySelectedBuyCategory(false);
@@ -432,7 +497,10 @@ export default function ShoppingList({
                   <><Store className="w-3 h-3" /> {deal.storeName}</>
                 )}
               </div>
-              <div className="font-bold text-sm leading-tight text-ink-black pr-6">{deal.name}</div>
+              <div className="font-bold text-sm leading-tight text-ink-black pr-6">
+                {deal.brand && <div className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">[{deal.brand}]</div>}
+                {deal.name}
+              </div>
               <div className="text-sm font-bold text-zinc-500 bg-red-50 px-2 py-0.5 rounded-md self-start">{deal.price}</div>
               
               <button
@@ -479,27 +547,37 @@ export default function ShoppingList({
           </button>
         ))}
         {isAddingStoreTab ? (
-          <form 
-            onSubmit={(e) => { 
-               e.preventDefault(); 
-               if (newStoreTabName.trim() && !allStoreTabs.includes(newStoreTabName.trim())) {
-                 setCustomStoreTabs([...customStoreTabs, newStoreTabName.trim()]);
-                 setActiveStoreTab(newStoreTabName.trim());
-               }
-               setNewStoreTabName('');
-               setIsAddingStoreTab(false);
-            }} 
-            className="flex-shrink-0 flex items-center bg-white border border-ink-black rounded-[12px] px-2 py-1 shadow-sm"
-          >
+          <div className="flex-shrink-0 flex items-center bg-white border border-ink-black rounded-[12px] px-2 py-1 shadow-sm">
             <input 
               autoFocus 
               value={newStoreTabName} 
               onChange={e => setNewStoreTabName(e.target.value)} 
-              onBlur={() => setIsAddingStoreTab(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (newStoreTabName.trim() && !allStoreTabs.includes(newStoreTabName.trim())) {
+                    setCustomStoreTabs(prev => [...prev, newStoreTabName.trim()]);
+                    setActiveStoreTab(newStoreTabName.trim());
+                  }
+                  setNewStoreTabName('');
+                  setIsAddingStoreTab(false);
+                } else if (e.key === 'Escape') {
+                  setNewStoreTabName('');
+                  setIsAddingStoreTab(false);
+                }
+              }}
+              onBlur={() => {
+                if (newStoreTabName.trim() && !allStoreTabs.includes(newStoreTabName.trim())) {
+                  setCustomStoreTabs(prev => [...prev, newStoreTabName.trim()]);
+                  setActiveStoreTab(newStoreTabName.trim());
+                }
+                setNewStoreTabName('');
+                setIsAddingStoreTab(false);
+              }}
               placeholder="Store name..."
               className="bg-transparent border-none focus:outline-none text-xs px-3 py-1.5 w-32 text-ink-black uppercase font-bold tracking-widest"
             />
-          </form>
+          </div>
         ) : (
           <button 
             onClick={() => setIsAddingStoreTab(true)}
@@ -545,7 +623,10 @@ export default function ShoppingList({
                   >
                     <div>
                       <div className="font-bold text-sm text-ink-black flex items-center gap-2">
-                        {deal.name}
+                        <span>
+                          {deal.brand && <span className="text-[10px] text-zinc-400 uppercase tracking-widest mr-1.5 font-medium">[{deal.brand}]</span>}
+                          {deal.name}
+                        </span>
                         <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">{deal.price}</span>
                       </div>
                       <div className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
@@ -566,13 +647,25 @@ export default function ShoppingList({
             )}
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3">
-            <input
-              type="text"
-              placeholder="Amount/Qty (e.g., 2 lbs) - Opt"
-              value={newItemAmount}
-              onChange={(e) => setNewItemAmount(e.target.value)}
-              className="flex-1 w-full sm:w-auto px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
-            />
+            <div className="flex items-center flex-1 w-full sm:w-auto bg-white border border-zinc-200 rounded-[12px] h-[46px] overflow-hidden">
+              <button 
+                type="button" 
+                onClick={() => setNewItemAmount(Math.max(1, (parseInt(newItemAmount) || 1) - 1).toString())}
+                className="w-10 h-full flex items-center justify-center text-zinc-400 hover:bg-zinc-50 transition-colors border-r border-zinc-100"
+              >
+                -
+              </button>
+              <div className="flex-1 text-center font-bold text-sm text-ink-black">
+                {newItemAmount || '1'}
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setNewItemAmount(((parseInt(newItemAmount) || 1) + 1).toString())}
+                className="w-10 h-full flex items-center justify-center text-zinc-400 hover:bg-zinc-50 transition-colors border-l border-zinc-100"
+              >
+                +
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Est. Price (e.g., $3.99) - Opt"
@@ -611,7 +704,74 @@ export default function ShoppingList({
             </div>
           </div>
         </form>
+
+        <label className="mt-4 w-full py-4 border border-dashed border-emerald-200 bg-emerald-50/10 rounded-[12px] flex items-center justify-center gap-2.5 text-emerald-500 hover:text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all font-sans group cursor-pointer relative overflow-hidden">
+           <input type="file" accept="image/*" onChange={handleScanReceipt} className="hidden" disabled={isScanningReceipt} />
+           {isScanningReceipt ? (
+              <div className="flex items-center gap-2.5">
+                 <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Scanning Receipt...</span>
+              </div>
+           ) : (
+              <div className="flex items-center gap-2.5">
+                 <Receipt className="w-4 h-4" />
+                 <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Scan Receipt (Bulk Import)</span>
+              </div>
+           )}
+        </label>
       </section>
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {receiptResult && (
+          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-white w-full max-w-md rounded-t-[28px] sm:rounded-[20px] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
+            >
+              <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
+                <div>
+                   <h3 className="text-xl font-bold text-ink-black flex items-center gap-2">
+                     <CheckSquare className="w-5 h-5 text-emerald-500" />
+                     {receiptResult.storeName || "Receipt Result"}
+                   </h3>
+                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{receiptResult.date || "Unknown Date"} • {receiptResult.items?.length || 0} items</span>
+                </div>
+                <button 
+                  onClick={() => setReceiptResult(null)}
+                  className="p-1.5 text-zinc-400 hover:text-ink-black transition-colors shrink-0"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 space-y-4 font-sans max-h-[50vh]">
+                 {receiptResult.items?.map((item: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between bg-zinc-50 border border-zinc-100 p-3 rounded-xl">
+                       <div className="min-w-0 pr-4 flex-1">
+                          <h4 className="font-semibold text-sm text-ink-black truncate">{item.name}</h4>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{item.quantity}</span>
+                       </div>
+                       <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0">
+                          {item.price !== undefined ? `$${item.price}` : 'Unknown'}
+                       </span>
+                    </div>
+                 ))}
+              </div>
+              <div className="p-6 border-t border-zinc-100">
+                <button 
+                  onClick={confirmReceiptImport}
+                  className="w-full py-4 bg-ink-black text-white rounded-[16px] text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-sm"
+                >
+                  Import {receiptResult.items?.length} Items
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Part 2: Active To-Buy List */}
       <section className="mb-12">
@@ -667,13 +827,25 @@ export default function ShoppingList({
                             </select>
                           </div>
                           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                            <input 
-                              type="text" 
-                              value={editItemAmount}
-                              onChange={(e) => setEditItemAmount(e.target.value)}
-                              className="flex-1 min-w-[70px] px-3 py-2 bg-white border border-zinc-200 rounded-[8px] text-xs focus:outline-none focus:border-zinc-400"
-                              placeholder="Opt. Amount"
-                            />
+                            <div className="flex items-center flex-1 min-w-[90px] h-[34px] bg-white border border-zinc-200 rounded-[8px] overflow-hidden">
+                              <button 
+                                type="button" 
+                                onClick={() => setEditItemAmount(Math.max(1, (parseInt(editItemAmount) || 1) - 1).toString())}
+                                className="w-8 h-full flex items-center justify-center text-zinc-400 hover:bg-zinc-50 transition-colors border-r border-zinc-100"
+                              >
+                                -
+                              </button>
+                              <div className="flex-1 text-center font-bold text-xs text-ink-black">
+                                {editItemAmount || '1'}
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setEditItemAmount(((parseInt(editItemAmount) || 1) + 1).toString())}
+                                className="w-8 h-full flex items-center justify-center text-zinc-400 hover:bg-zinc-50 transition-colors border-l border-zinc-100"
+                              >
+                                +
+                              </button>
+                            </div>
                             <input 
                               type="text" 
                               value={editItemPrice}

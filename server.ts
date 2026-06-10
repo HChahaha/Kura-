@@ -119,6 +119,103 @@ app.post("/api/parse-recipe", async (req, res) => {
   }
 });
 
+app.post("/api/scan-food", async (req, res) => {
+  try {
+    const { imageData, mimeType } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    if (!imageData || !mimeType) {
+      return res.status(400).json({ error: "Missing image data." });
+    }
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const parts = [
+      { text: "Identify the single main food item or ingredient in this image. Return its name (in English or the same language as marked on packaging if clear) and the best matching category from this list: Meat & Seafood, Produce, Dairy & Eggs, Bakery, Pantry, Snacks, Beverages, Frozen Food. Return structured JSON." },
+      { inlineData: { data: imageData, mimeType: mimeType } }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+             name: { type: Type.STRING, description: "Identified food generic name or product name" },
+             category: { type: Type.STRING, description: "Category of the food item" }
+          }
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to scan food" });
+  }
+});
+
+app.post("/api/scan-receipt", async (req, res) => {
+  try {
+    const { imageData, mimeType } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    if (!imageData || !mimeType) {
+      return res.status(400).json({ error: "Missing image data." });
+    }
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const parts = [
+      { text: "Parse the receipt line-by-line and extract the store name, purchase date, and array of purchased, physical grocery items found (skip taxes, discounts, non-food items if possible). For each item extract the name, price paid (numeric), and quantity/weight. Return structured JSON." },
+      { inlineData: { data: imageData, mimeType: mimeType } }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+             storeName: { type: Type.STRING },
+             date: { type: Type.STRING, description: "YYYY-MM-DD or recognized format" },
+             items: {
+               type: Type.ARRAY,
+               items: {
+                 type: Type.OBJECT,
+                 properties: {
+                   name: { type: Type.STRING },
+                   price: { type: Type.NUMBER },
+                   quantity: { type: Type.STRING, description: "Quantity or weight like '1', '0.5 kg', '2 lbs' etc" }
+                 }
+               }
+             }
+          }
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to scan receipt" });
+  }
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

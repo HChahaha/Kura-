@@ -479,7 +479,7 @@ export default function ShoppingList({
       </header>
 
       {/* Weekly Flyer Deals */}
-      <section className="mb-8">
+      <section id="tour-flyer-deals" className="mb-8">
         <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-3 flex items-center gap-2">
           <Tag className="w-3.5 h-3.5" />
           Weekly Flyer Deals
@@ -589,7 +589,7 @@ export default function ShoppingList({
       </div>
 
       {/* Part 1: Quick Add to Buy Form */}
-      <section className="mb-10 p-6 bg-zinc-50 rounded-[20px] border border-zinc-100">
+      <section id="tour-to-buy-form" className="mb-10 p-6 bg-zinc-50 rounded-[20px] border border-zinc-100">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
           <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
             <ShoppingBag className="w-3.5 h-3.5 text-ink-black" />

@@ -90,8 +90,31 @@ const CATEGORY_MAP: Record<string, string[]> = {
 
 export function suggestCategory(name: string): string | null {
   const lowercaseName = name.toLowerCase();
+
+  // Non-food / pantry exception items
+  if (
+    lowercaseName.includes('spray') ||
+    lowercaseName.includes('repellent') ||
+    lowercaseName.includes('cleaner') ||
+    lowercaseName.includes('shampoo') ||
+    lowercaseName.includes('soap')
+  ) {
+    return 'Pantry';
+  }
+
   for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
-    if (keywords.some(keyword => lowercaseName.includes(keyword))) {
+    if (keywords.some(keyword => {
+      if (keyword === 'pepper') {
+        return lowercaseName.includes('pepper') &&
+               !lowercaseName.includes('pepper spray') &&
+               !lowercaseName.includes('peppermill') &&
+               !lowercaseName.includes('pepper mill') &&
+               !lowercaseName.includes('dr pepper') &&
+               !lowercaseName.includes('pepper shaker') &&
+               !lowercaseName.includes('pepper sauce');
+      }
+      return lowercaseName.includes(keyword);
+    })) {
       return category;
     }
   }

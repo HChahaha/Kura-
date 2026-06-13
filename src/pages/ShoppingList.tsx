@@ -69,6 +69,381 @@ const ALL_DEALS: Record<string, any[]> = {
   ]
 };
 
+const VANCOUVER_FLYER_DATABASE = [
+  // Milk
+  { name: 'Oat Milk', storeName: 'Walmart', brand: "Earth's Own", price: 3.49, category: 'Dairy', raw_unit_text: '1.75L', original_title: "Earth's Own Oat Milk" },
+  { name: 'Oat Milk', storeName: 'Real Canadian Superstore', brand: "Earth's Own", price: 3.79, category: 'Dairy', raw_unit_text: '1.75L', original_title: "Earth's Own Oat Milk" },
+  { name: 'Oat Milk', storeName: 'T&T Supermarket', brand: "Earth's Own", price: 4.29, category: 'Dairy', raw_unit_text: '1.75L', original_title: "Earth's Own Oat Milk" },
+  { name: 'Oat Milk', storeName: 'Costco', brand: "Earth's Own", price: 2.99, category: 'Dairy', raw_unit_text: '1.75L', original_title: "Earth's Own Oat Milk" },
+
+  { name: '2% Milk', storeName: 'Walmart', brand: 'Dairyland', price: 4.89, category: 'Dairy', raw_unit_text: '4L', original_title: 'Dairyland 2% Milk' },
+  { name: '2% Milk', storeName: 'Real Canadian Superstore', brand: 'Dairyland', price: 4.99, category: 'Dairy', raw_unit_text: '4L', original_title: 'Dairyland 2% Milk' },
+  { name: '2% Milk', storeName: 'T&T Supermarket', brand: 'Dairyland', price: 5.49, category: 'Dairy', raw_unit_text: '4L', original_title: 'Dairyland 2% Milk' },
+  { name: '2% Milk', storeName: 'Costco', brand: 'Dairyland', price: 4.49, category: 'Dairy', raw_unit_text: '4L', original_title: 'Dairyland 2% Milk' },
+
+  // Eggs
+  { name: 'Large Eggs', storeName: 'Walmart', brand: 'GoldEgg', price: 4.29, category: 'Dairy', raw_unit_text: '12pcs', original_title: 'GoldEgg Large Eggs' },
+  { name: 'Large Eggs', storeName: 'Real Canadian Superstore', brand: 'GoldEgg', price: 4.49, category: 'Dairy', raw_unit_text: '12pcs', original_title: 'GoldEgg Large Eggs' },
+  { name: 'Large Eggs', storeName: 'T&T Supermarket', brand: 'GoldEgg', price: 4.99, category: 'Dairy', raw_unit_text: '12pcs', original_title: 'GoldEgg Large Eggs' },
+  { name: 'Large Eggs', storeName: 'Costco', brand: 'GoldEgg', price: 9.99, category: 'Dairy', raw_unit_text: '30pcs', original_title: 'GoldEgg Large Eggs' },
+
+  // Avocados
+  { name: 'Avocados', storeName: 'Costco', brand: 'Del Monte', price: 4.99, category: 'Vegetables', raw_unit_text: '5pcs', original_title: 'Del Monte Avocados' },
+  { name: 'Avocados', storeName: 'Walmart', brand: 'Del Monte', price: 1.25, category: 'Vegetables', raw_unit_text: 'each', original_title: 'Del Monte Avocados' },
+  { name: 'Avocados', storeName: 'Real Canadian Superstore', brand: 'Del Monte', price: 0.88, category: 'Vegetables', raw_unit_text: 'each', original_title: 'Del Monte Avocados' },
+  { name: 'Avocados', storeName: 'T&T Supermarket', brand: 'Del Monte', price: 1.49, category: 'Vegetables', raw_unit_text: 'each', original_title: 'Del Monte Avocados' },
+
+  // Napa Cabbage
+  { name: 'Napa Cabbage', storeName: 'T&T Supermarket', brand: 'Grown in BC', price: 0.88, category: 'Vegetables', raw_unit_text: 'lb', original_title: 'Grown in BC Napa Cabbage' },
+  { name: 'Napa Cabbage', storeName: 'Real Canadian Superstore', brand: 'Grown in BC', price: 1.19, category: 'Vegetables', raw_unit_text: 'lb', original_title: 'Grown in BC Napa Cabbage' },
+  { name: 'Napa Cabbage', storeName: 'Walmart', brand: 'Grown in BC', price: 1.49, category: 'Vegetables', raw_unit_text: 'lb', original_title: 'Grown in BC Napa Cabbage' },
+  { name: 'Napa Cabbage', storeName: 'Costco', brand: 'Grown in BC', price: 1.29, category: 'Vegetables', raw_unit_text: 'lb', original_title: 'Grown in BC Napa Cabbage' },
+
+  // Pork Ribs
+  { name: 'Pork Ribs', storeName: 'T&T Supermarket', brand: 'Maple Leaf', price: 2.88, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Pork Ribs' },
+  { name: 'Pork Ribs', storeName: 'Real Canadian Superstore', brand: 'Maple Leaf', price: 3.29, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Pork Ribs' },
+  { name: 'Pork Ribs', storeName: 'Walmart', brand: 'Maple Leaf', price: 3.49, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Pork Ribs' },
+  { name: 'Pork Ribs', storeName: 'Costco', brand: 'Maple Leaf', price: 2.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Pork Ribs' },
+
+  // Tofu
+  { name: 'Tofu', storeName: 'T&T Supermarket', brand: 'Sunrise', price: 1.69, category: 'Pantry', raw_unit_text: '350g', original_title: 'Sunrise Tofu' },
+  { name: 'Tofu', storeName: 'Real Canadian Superstore', brand: 'Sunrise', price: 1.99, category: 'Pantry', raw_unit_text: '350g', original_title: 'Sunrise Tofu' },
+  { name: 'Tofu', storeName: 'Walmart', brand: 'Sunrise', price: 1.88, category: 'Pantry', raw_unit_text: '350g', original_title: 'Sunrise Tofu' },
+  { name: 'Tofu', storeName: 'Costco', brand: 'Sunrise', price: 1.50, category: 'Pantry', raw_unit_text: '350g', original_title: 'Sunrise Tofu' },
+
+  // Miso Paste
+  { name: 'Miso Paste', storeName: 'T&T Supermarket', brand: 'Hikari', price: 3.99, category: 'Pantry', raw_unit_text: '400g', original_title: 'Hikari Miso Paste' },
+  { name: 'Miso Paste', storeName: 'Real Canadian Superstore', brand: 'Hikari', price: 4.49, category: 'Pantry', raw_unit_text: '400g', original_title: 'Hikari Miso Paste' },
+  { name: 'Miso Paste', storeName: 'Walmart', brand: 'Hikari', price: 4.89, category: 'Pantry', raw_unit_text: '400g', original_title: 'Hikari Miso Paste' },
+  { name: 'Miso Paste', storeName: 'Costco', brand: 'Hikari', price: 5.29, category: 'Pantry', raw_unit_text: '400g', original_title: 'Hikari Miso Paste' },
+
+  // Chicken Breast
+  { name: 'Chicken Breast', storeName: 'Walmart', brand: 'Maple Leaf', price: 4.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Chicken Breast' },
+  { name: 'Chicken Breast', storeName: 'Real Canadian Superstore', brand: 'Maple Leaf', price: 5.49, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Chicken Breast' },
+  { name: 'Chicken Breast', storeName: 'T&T Supermarket', brand: 'Maple Leaf', price: 5.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Chicken Breast' },
+  { name: 'Chicken Breast', storeName: 'Costco', brand: 'Maple Leaf', price: 4.79, category: 'Meat', raw_unit_text: 'lb', original_title: 'Maple Leaf Chicken Breast' },
+
+  // Salmon
+  { name: 'Salmon Fillet', storeName: 'T&T Supermarket', brand: 'Fresh Catch', price: 11.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Fresh Catch Salmon Fillet' },
+  { name: 'Salmon Fillet', storeName: 'Real Canadian Superstore', brand: 'Fresh Catch', price: 12.49, category: 'Meat', raw_unit_text: 'lb', original_title: 'Fresh Catch Salmon Fillet' },
+  { name: 'Salmon Fillet', storeName: 'Walmart', brand: 'Fresh Catch', price: 12.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Fresh Catch Salmon Fillet' },
+  { name: 'Salmon Fillet', storeName: 'Costco', brand: 'Fresh Catch', price: 10.99, category: 'Meat', raw_unit_text: 'lb', original_title: 'Fresh Catch Salmon Fillet' },
+
+  // Apples
+  { name: 'Gala Apples', storeName: 'Real Canadian Superstore', brand: 'BC Tree Fruit', price: 1.29, category: 'Fruit', raw_unit_text: 'lb', original_title: 'BC Tree Fruit Gala Apples' },
+  { name: 'Gala Apples', storeName: 'Walmart', brand: 'BC Tree Fruit', price: 1.49, category: 'Fruit', raw_unit_text: 'lb', original_title: 'BC Tree Fruit Gala Apples' },
+  { name: 'Gala Apples', storeName: 'T&T Supermarket', brand: 'BC Tree Fruit', price: 1.69, category: 'Fruit', raw_unit_text: 'lb', original_title: 'BC Tree Fruit Gala Apples' },
+  { name: 'Gala Apples', storeName: 'Costco', brand: 'BC Tree Fruit', price: 0.99, category: 'Fruit', raw_unit_text: 'lb', original_title: 'BC Tree Fruit Gala Apples' },
+
+  // Bananas
+  { name: 'Bananas', storeName: 'Walmart', brand: 'Chiquita', price: 0.69, category: 'Fruits', raw_unit_text: 'lb', original_title: 'Chiquita Bananas' },
+  { name: 'Bananas', storeName: 'Real Canadian Superstore', brand: 'Chiquita', price: 0.69, category: 'Fruits', raw_unit_text: 'lb', original_title: 'Chiquita Bananas' },
+  { name: 'Bananas', storeName: 'T&T Supermarket', brand: 'Chiquita', price: 0.79, category: 'Fruits', raw_unit_text: 'lb', original_title: 'Chiquita Bananas' },
+  { name: 'Bananas', storeName: 'Costco', brand: 'Dolco', price: 1.99, category: 'Fruits', raw_unit_text: '3lb bag', original_title: 'Dolco Bananas 3lb bag' },
+
+  // Sekka Rice Bulk (6.8kg)
+  { name: 'Sekka Rice', storeName: 'T&T Supermarket', brand: 'Sekka', price: 17.88, category: 'Pantry', raw_unit_text: '6.8kg bag', original_title: 'Sekka Rice 6.8kg' },
+  { name: 'Sekka Rice', storeName: 'Real Canadian Superstore', brand: 'Sekka', price: 18.50, category: 'Pantry', raw_unit_text: '6.8kg bag', original_title: 'Sekka Rice 6.8kg' },
+  { name: 'Sekka Rice', storeName: 'Walmart', brand: 'Sekka', price: 18.99, category: 'Pantry', raw_unit_text: '6.8kg bag', original_title: 'Sekka Rice 6.8kg' },
+  { name: 'Sekka Rice', storeName: 'Costco', brand: 'Sekka', price: 16.49, category: 'Pantry', raw_unit_text: '6.8kg bag', original_title: 'Sekka Rice 6.8kg' },
+
+  // Sekka Rice Small Pouch (250g)
+  { name: 'Sekka Rice', storeName: 'T&T Supermarket', brand: 'Sekka', price: 3.99, category: 'Pantry', raw_unit_text: '250g pouch', original_title: 'Sekka Rice 250g' },
+  { name: 'Sekka Rice', storeName: 'Real Canadian Superstore', brand: 'Sekka', price: 4.25, category: 'Pantry', raw_unit_text: '250g pouch', original_title: 'Sekka Rice 250g' },
+  { name: 'Sekka Rice', storeName: 'Walmart', brand: 'Sekka', price: 4.50, category: 'Pantry', raw_unit_text: '250g pouch', original_title: 'Sekka Rice 250g' },
+  { name: 'Sekka Rice', storeName: 'Costco', brand: 'Sekka', price: 3.49, category: 'Pantry', raw_unit_text: '250g pouch', original_title: 'Sekka Rice 250g' },
+
+  // Jasmine Rice
+  { name: 'Jasmine Rice', storeName: 'T&T Supermarket', brand: 'Rooster', price: 15.88, category: 'Pantry', raw_unit_text: '8kg bag', original_title: 'Rooster Jasmine Rice' },
+  { name: 'Jasmine Rice', storeName: 'Real Canadian Superstore', brand: 'Rooster', price: 16.99, category: 'Pantry', raw_unit_text: '8kg bag', original_title: 'Rooster Jasmine Rice' },
+  { name: 'Jasmine Rice', storeName: 'Walmart', brand: 'Rooster', price: 17.49, category: 'Pantry', raw_unit_text: '8kg bag', original_title: 'Rooster Jasmine Rice' },
+  { name: 'Jasmine Rice', storeName: 'Costco', brand: 'Rooster', price: 14.99, category: 'Pantry', raw_unit_text: '8kg bag', original_title: 'Rooster Jasmine Rice' },
+
+  // Spinach
+  { name: 'Baby Spinach', storeName: 'Walmart', brand: "Olivia's Organics", price: 2.99, category: 'Vegetables', raw_unit_text: '142g pack', original_title: "Olivia's Organics Baby Spinach" },
+  { name: 'Baby Spinach', storeName: 'Real Canadian Superstore', brand: "Olivia's Organics", price: 3.29, category: 'Vegetables', raw_unit_text: '142g pack', original_title: "Olivia's Organics Baby Spinach" },
+  { name: 'Baby Spinach', storeName: 'T&T Supermarket', brand: "Olivia's Organics", price: 3.49, category: 'Vegetables', raw_unit_text: '142g pack', original_title: "Olivia's Organics Baby Spinach" },
+  { name: 'Baby Spinach', storeName: 'Costco', brand: "Olivia's Organics", price: 2.49, category: 'Vegetables', raw_unit_text: '142g pack', original_title: "Olivia's Organics Baby Spinach" }
+];
+
+const parsePrice = (priceStr: string): number => {
+  if (!priceStr) return 999.99;
+  const match = priceStr.match(/\d+(\.\d+)?/);
+  return match ? parseFloat(match[0]) : 999.99;
+};
+
+const formatPrice = (priceStr: string): string => {
+  if (!priceStr) return '';
+  const num = parsePrice(priceStr);
+  if (num === 999.99) return priceStr;
+  return `$${num.toFixed(2)}`;
+};
+
+const formatPriceForDisplay = (price: number): string => {
+  return `$${price.toFixed(2)}`;
+};
+
+const parseFlyerUnit = (
+  total_price: number,
+  rawUnitText: string,
+  itemTitle: string
+): {
+  pack_multiplier: number;
+  base_unit: string;
+  normalized_unit_price: number;
+} => {
+  let str = (rawUnitText || "").trim().toLowerCase();
+  if (!str) {
+    str = itemTitle.trim().toLowerCase();
+  }
+
+  let pack_multiplier = 1;
+  let base_unit = "pc";
+
+  // Match multiplier patterns like: "3x 1.75L", "3 x 1.75 L", "2x 4L"
+  const multSubunitRegex = /(\d+)\s*(?:x|\*)\s*(\d+(?:\.\d+)?\s*[a-zA-Z]+)/i;
+  const multSubunitMatch = str.match(multSubunitRegex);
+
+  // Match pack count patterns like: "30pcs", "2-pack", "12 rolls", "12 pack", "2pk"
+  const packRegex = /(\d+)\s*(?:-|–|\s)*(pcs|pc|pack|pk|roll|rolls|box|boxes|bag|bags|bottle|bottles|can|cans|piece|pieces|ea|each|sheet|sheets|pouch|pouches|tub|tubs|dz|dozen)\b/i;
+  const packMatch = str.match(packRegex);
+
+  // Match weight/volume with integer amount like "5 kg", "10 kg", "3 lb", "4L"
+  const weightVolRegex = /(\d+)\s*(kg|g|l|ml|lbs|lb|oz)\b/i;
+  const weightVolMatch = str.match(weightVolRegex);
+
+  // Fallback match float weights/volumes like "1.75L", "6.8kg", "350g" as total 1 package with that float as unit
+  const floatRegex = /(\d+(?:\.\d+)?)\s*(kg|g|l|ml|lbs|lb|oz)\b/i;
+  const floatMatch = str.match(floatRegex);
+
+  if (multSubunitMatch) {
+    pack_multiplier = parseInt(multSubunitMatch[1], 10);
+    base_unit = multSubunitMatch[2].trim();
+  } else if (packMatch) {
+    pack_multiplier = parseInt(packMatch[1], 10);
+    const matchedUnit = packMatch[2].trim().toLowerCase();
+    // Normalize plural units for standard representation
+    if (["pcs", "pc", "piece", "pieces", "ea", "each"].includes(matchedUnit)) {
+      base_unit = "pc";
+    } else if (["rolls", "roll"].includes(matchedUnit)) {
+      base_unit = "roll";
+    } else if (["pack", "packs", "pk", "pks"].includes(matchedUnit)) {
+      base_unit = "pack";
+    } else if (["boxes", "box"].includes(matchedUnit)) {
+      base_unit = "box";
+    } else if (["cans", "can"].includes(matchedUnit)) {
+      base_unit = "can";
+    } else if (["bags", "bag"].includes(matchedUnit)) {
+      base_unit = "bag";
+    } else if (["pouches", "pouch"].includes(matchedUnit)) {
+      base_unit = "pouch";
+    } else if (["bottles", "bottle"].includes(matchedUnit)) {
+      base_unit = "bottle";
+    } else if (["tubs", "tub"].includes(matchedUnit)) {
+      base_unit = "tub";
+    } else if (["sheets", "sheet"].includes(matchedUnit)) {
+      base_unit = "sheet";
+    } else {
+      base_unit = matchedUnit;
+    }
+  } else if (weightVolMatch) {
+    pack_multiplier = parseInt(weightVolMatch[1], 10);
+    base_unit = weightVolMatch[2].trim().toLowerCase();
+  } else if (floatMatch) {
+    pack_multiplier = 1;
+    base_unit = floatMatch[1] + floatMatch[2]; // e.g. "1.75l", "6.8kg"
+  } else {
+    pack_multiplier = 1;
+    base_unit = str ? str.replace(/bag|box|pack/g, "").trim().toLowerCase() : "pc";
+    if (!base_unit) base_unit = "pc";
+  }
+
+  if (isNaN(pack_multiplier) || pack_multiplier <= 0) {
+    pack_multiplier = 1;
+  }
+
+  const normalized_unit_price = total_price / pack_multiplier;
+
+  return {
+    pack_multiplier,
+    base_unit,
+    normalized_unit_price
+  };
+};
+
+const parseSizeOrTier = (name: string, priceStr?: string, quantityStr?: string) => {
+  const combined = `${name} ${quantityStr || ''}`.toLowerCase();
+  
+  if (combined.includes('6.8kg') || combined.includes('6.8 kg') || combined.includes('8kg') || combined.includes('10kg') || combined.includes('bulk') || combined.includes('large')) {
+    return 'large-bulk';
+  }
+  if (combined.includes('250g') || combined.includes('350g') || combined.includes('400g') || combined.includes('142g') || combined.includes('pouch') || combined.includes('small')) {
+    return 'small-single';
+  }
+  if (combined.includes('1.75l') || combined.includes('1.89l') || combined.includes('2l')) {
+    return 'medium';
+  }
+  if (combined.includes('4l')) {
+    return 'large-bulk';
+  }
+  if (combined.includes('/lb') || combined.includes('per lb') || combined.includes('lb')) {
+    return 'per-lb';
+  }
+  if (combined.includes('/dz') || combined.includes('dozen') || combined.includes('12pcs') || combined.includes('12 pack')) {
+    return 'dozen';
+  }
+
+  if (priceStr) {
+    const numPrice = parsePrice(priceStr);
+    if (combined.includes('rice') || combined.includes('sekka')) {
+      if (numPrice >= 10) return 'large-bulk';
+      return 'small-single';
+    }
+  }
+
+  if (combined.includes('cabbage') || combined.includes('ribs') || combined.includes('breast') || combined.includes('fillet') || combined.includes('apples') || combined.includes('salmon')) {
+    return 'per-lb';
+  }
+  if (combined.includes('eggs')) {
+    return 'dozen';
+  }
+
+  return 'standard';
+};
+
+const parseUnitSizeFromQuery = (queryText: string): { baseName: string; unitSize?: string } => {
+  const regex = /\b(\d+(?:\.\d+)?\s*(?:kg|g|l|ml|lbs|pcs|oz|dz|ea))\b/i;
+  const match = queryText.match(regex);
+  if (match) {
+    const size = match[1].replace(/\s+/g, '').toLowerCase();
+    const base = queryText.replace(match[0], '').trim().replace(/\s+/g, ' ');
+    return { baseName: base, unitSize: size };
+  }
+  return { baseName: queryText };
+};
+
+const getStablePriceForQuery = (name: string, storeIndex: number): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  hash = Math.abs(hash);
+  const baseValue = 1.49 + (hash % 11) + ((hash % 100) / 100);
+  const offsets = [-0.50, -0.15, 0.20, 0.10];
+  const offset = offsets[storeIndex % 4];
+  const priceVal = Math.max(0.69, parseFloat((baseValue + offset).toFixed(2)));
+  return `$${priceVal}`;
+};
+
+const getVancouverStoreDeals = (queryText: string, targetSizeTier?: string, specificUnitSize?: string) => {
+  const normalizedQuery = queryText.trim().toLowerCase();
+  
+  const stores = [
+    { name: 'Costco', category: 'Pantry' },
+    { name: 'T&T Supermarket', category: 'Pantry' },
+    { name: 'Real Canadian Superstore', category: 'Pantry' },
+    { name: 'Walmart', category: 'Pantry' }
+  ];
+
+  const enrichAndSortDeals = (dealsList: any[]) => {
+    const enriched = dealsList.map(deal => {
+      const parsed = parseFlyerUnit(deal.price, deal.raw_unit_text || '', deal.name || '');
+      return {
+        ...deal,
+        pack_multiplier: parsed.pack_multiplier,
+        base_unit: parsed.base_unit,
+        normalized_unit_price: parsed.normalized_unit_price
+      };
+    });
+    return enriched.sort((a, b) => a.normalized_unit_price - b.normalized_unit_price);
+  };
+
+  if (!normalizedQuery) {
+    const defaultDeals = [
+      { id: 'v-cabbage-0', storeName: 'T&T Supermarket', name: 'Grown in BC Napa Cabbage', brand: 'Grown in BC', price: 0.88, category: 'Vegetables', raw_unit_text: 'lb' },
+      { id: 'v-cabbage-1', storeName: 'Real Canadian Superstore', name: 'Grown in BC Napa Cabbage', brand: 'Grown in BC', price: 1.19, category: 'Vegetables', raw_unit_text: 'lb' },
+      { id: 'v-cabbage-2', storeName: 'Costco', name: 'Grown in BC Napa Cabbage', brand: 'Grown in BC', price: 1.29, category: 'Vegetables', raw_unit_text: 'lb' },
+      { id: 'v-cabbage-3', storeName: 'Walmart', name: 'Grown in BC Napa Cabbage', brand: 'Grown in BC', price: 1.49, category: 'Vegetables', raw_unit_text: 'lb' }
+    ];
+    return enrichAndSortDeals(defaultDeals);
+  }
+
+  const parsedQuery = parseUnitSizeFromQuery(queryText);
+  const queryBase = parsedQuery.baseName.trim().toLowerCase();
+
+  const allProductMatches = VANCOUVER_FLYER_DATABASE.filter(item => 
+    item.name.toLowerCase().includes(queryBase) || 
+    queryBase.includes(item.name.toLowerCase())
+  );
+
+  let matchedItemName = parsedQuery.baseName;
+  let detectedCategory = 'Pantry';
+
+  if (allProductMatches.length > 0) {
+    const exact = allProductMatches.find(m => m.name.toLowerCase() === queryBase);
+    matchedItemName = exact ? exact.name : allProductMatches[0].name;
+    detectedCategory = exact ? exact.category : allProductMatches[0].category;
+  } else {
+    const sug = suggestCategory(queryText);
+    if (sug) detectedCategory = sug;
+  }
+
+  if (allProductMatches.length === 0) {
+    matchedItemName = parsedQuery.baseName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  const finalDeals = stores.map((store, index) => {
+    const storeMatches = allProductMatches.filter(item => 
+      item.storeName === store.name && 
+      item.name.toLowerCase() === matchedItemName.toLowerCase()
+    );
+
+    let existing: typeof VANCOUVER_FLYER_DATABASE[0] | undefined;
+
+    if (storeMatches.length > 0) {
+      if (specificUnitSize) {
+        existing = storeMatches.find(m => m.raw_unit_text?.toLowerCase() === specificUnitSize.toLowerCase());
+      }
+      if (!existing && targetSizeTier) {
+        existing = storeMatches.find(m => parseSizeOrTier(m.name, undefined, m.raw_unit_text) === targetSizeTier);
+      }
+      if (!existing && parsedQuery.unitSize) {
+        existing = storeMatches.find(m => m.raw_unit_text?.toLowerCase() === parsedQuery.unitSize.toLowerCase());
+      }
+      if (!existing) {
+        existing = storeMatches[0];
+      }
+    }
+
+    if (existing) {
+      return {
+        id: `v-db-${store.name}-${matchedItemName}-${existing.raw_unit_text}`.replace(/\s+/g, '-'),
+        storeName: existing.storeName,
+        name: existing.original_title,
+        brand: existing.brand || '',
+        price: existing.price,
+        category: existing.category,
+        raw_unit_text: existing.raw_unit_text || ''
+      };
+    } else {
+      const generatedPriceStr = getStablePriceForQuery(matchedItemName, index);
+      const generatedPriceNum = parsePrice(generatedPriceStr);
+      const generatedUnit = specificUnitSize || parsedQuery.unitSize || (allProductMatches.length > 0 ? allProductMatches[0].raw_unit_text : '') || '';
+      return {
+        id: `v-gen-${store.name}-${matchedItemName}-${generatedUnit}`.replace(/\s+/g, '-'),
+        storeName: store.name,
+        name: matchedItemName,
+        brand: '',
+        price: generatedPriceNum,
+        category: detectedCategory,
+        raw_unit_text: generatedUnit
+      };
+    }
+  });
+
+  return enrichAndSortDeals(finalDeals);
+};
+
 const getFlyerDeals = () => {
   const region = localStorage.getItem('shopping_country') || 'Canada';
   return ALL_DEALS[region] || ALL_DEALS['Canada'];
@@ -93,71 +468,6 @@ export default function ShoppingList({
   const [newStoreName, setNewStoreName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Pantry');
   const [searchHistoryQuery, setSearchHistoryQuery] = useState('');
-  
-  const [isScanningReceipt, setIsScanningReceipt] = useState(false);
-  const [receiptResult, setReceiptResult] = useState<any>(null);
-
-  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsScanningReceipt(true);
-    setReceiptResult(null);
-    try {
-      const reader = new FileReader();
-      const base64Data = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch('/api/scan-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageData: base64Data, mimeType: file.type })
-      });
-      if (!res.ok) throw new Error("Failed to scan receipt");
-      const data = await res.json();
-      if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-        setReceiptResult(data);
-      } else {
-        alert("Could not identify any grocery items from this receipt.");
-      }
-    } catch (err) {
-       console.error(err);
-       alert('Error scanning receipt.');
-    } finally {
-      setIsScanningReceipt(false);
-      e.target.value = '';
-    }
-  };
-
-  const confirmReceiptImport = () => {
-    if (!receiptResult || !receiptResult.items) return;
-    const items = receiptResult.items;
-    
-    items.forEach((item: any) => {
-      // Add directly to inventory
-      onAddToInventory({
-        name: item.name,
-        category: 'Produce', // fallback
-        location: 'Fridge',
-        quantity: item.quantity || '1',
-        purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0]
-      });
-      
-      // log to price history tracker
-      onAddPurchaseRecord({
-        id: Math.random().toString(36).substring(7),
-        name: item.name,
-        category: 'Produce',
-        storeName: receiptResult.storeName || 'Unknown Store',
-        price: (item.price !== undefined && item.price !== null) ? `$${parseFloat(item.price).toFixed(2)}` : 'Unspecified',
-        purchaseDate: receiptResult.date || new Date().toISOString().split('T')[0],
-        quantityBought: String(item.quantity || '1')
-      });
-    });
-    
-    setReceiptResult(null);
-    alert(`Imported ${items.length} items from ${receiptResult.storeName || 'receipt'} directly to Inventory & Price History!`);
-  };
 
   // Custom purchase details state
   const [activeCompletingItem, setActiveCompletingItem] = useState<ShoppingItem | null>(null);
@@ -185,20 +495,85 @@ export default function ShoppingList({
   const [customStoreTabs, setCustomStoreTabs] = useState<string[]>(['Walmart', 'T&T Supermarket']);
   const [isAddingStoreTab, setIsAddingStoreTab] = useState(false);
   const [newStoreTabName, setNewStoreTabName] = useState('');
+
+  const [expandedPriceMatcherItem, setExpandedPriceMatcherItem] = useState<string | null>(null);
+  const [priceMatcherSearch, setPriceMatcherSearch] = useState('');
+  const [selectedSizeByItem, setSelectedSizeByItem] = useState<Record<string, string>>({});
+
+  const activeToBuy = React.useMemo(() => {
+    return Array.from(new Set(shoppingList.filter(item => !item.checked).map(item => item.name.trim())));
+  }, [shoppingList]);
+
+  const popularItems = React.useMemo(() => {
+    const historyNames = purchaseHistory.map(h => h.name.trim());
+    const counts: Record<string, number> = {};
+    historyNames.forEach(name => {
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    const sortedHistory = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+
+    const defaultFlyerItems = [
+      'Oat Milk',
+      '2% Milk',
+      'Large Eggs',
+      'Avocados',
+      'Napa Cabbage',
+      'Chicken Breast',
+      'Pork Ribs',
+      'Tofu',
+      'Baby Spinach'
+    ];
+    const combined = Array.from(new Set([...sortedHistory, ...defaultFlyerItems]));
+    const activeSet = new Set(activeToBuy.map(name => name.toLowerCase()));
+    return combined.filter(item => !activeSet.has(item.toLowerCase())).slice(0, 6);
+  }, [purchaseHistory, activeToBuy]);
+
+  const itemsToDisplay = React.useMemo(() => {
+    const query = priceMatcherSearch.trim().toLowerCase();
+    if (!query) {
+      return {
+        toBuy: activeToBuy,
+        popular: []
+      };
+    }
+
+    // Find matches in Vancouver database
+    const dbMatches = Array.from(new Set(
+      VANCOUVER_FLYER_DATABASE
+        .filter(item => item.name.toLowerCase().includes(query))
+        .map(item => item.name)
+    ));
+
+    // If no direct database item matches, we include the typed query as a capitalized option
+    if (dbMatches.length === 0) {
+      const capitalized = priceMatcherSearch.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      dbMatches.push(capitalized);
+    }
+
+    return {
+      toBuy: dbMatches,
+      popular: []
+    };
+  }, [priceMatcherSearch, activeToBuy]);
   
-  const suggestedDeals = React.useMemo(() => {
-    if (!newItemName.trim() || newItemName.length < 2) return [];
-    return getFlyerDeals().filter(d => d.name.toLowerCase().includes(newItemName.toLowerCase()));
+  const vancouverDeals = React.useMemo(() => {
+    return getVancouverStoreDeals(newItemName);
   }, [newItemName]);
 
-  const handleAddFlyerDeal = (deal: typeof ALL_DEALS['Canada'][0]) => {
+  const handleAddVancouverDeal = (deal: { id: string; storeName: string; name: string; brand?: string; price: number; category: string; raw_unit_text?: string; pack_multiplier?: number; base_unit?: string; normalized_unit_price?: number }) => {
+    const finalName = deal.brand ? `[${deal.brand}] ${deal.name}` : deal.name;
+    const finalPriceVal = formatPriceForDisplay(deal.price);
+    const finalPrice = deal.raw_unit_text ? `${finalPriceVal} / ${deal.raw_unit_text}` : finalPriceVal;
     onAddShoppingItem({ 
       id: Math.random().toString(36).substring(7), 
-      name: deal.name, 
+      name: finalName, 
       category: deal.category, 
       checked: false, 
-      price: deal.price, 
-      storeName: deal.storeName 
+      price: finalPrice, 
+      storeName: deal.storeName,
+      amount: '1'
     } as ShoppingItem);
     
     setAddedDeals(prev => [...prev, deal.id]);
@@ -479,44 +854,235 @@ export default function ShoppingList({
       </header>
 
       {/* Weekly Flyer Deals */}
-      <section id="tour-flyer-deals" className="mb-8">
-        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-3 flex items-center gap-2">
-          <Tag className="w-3.5 h-3.5" />
-          Weekly Flyer Deals
+      <section id="tour-flyer-deals" className="mb-8 p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] shadow-sm animate-in fade-in">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-1 flex items-center gap-2">
+          <Tag className="w-4 h-4" />
+          Vancouver Store Price Matcher
         </h3>
-        <div className="flex gap-3 overflow-x-auto pb-4 pt-1 snap-x scrollbar-hide">
-          {getFlyerDeals().map((deal) => (
-            <div
-              key={deal.id}
-              className={`snap-start shrink-0 p-3 bg-white border ${addedDeals.includes(deal.id) ? 'border-bamboo-green bg-green-50' : 'border-red-100'} rounded-[16px] text-left min-w-[140px] shadow-sm flex flex-col gap-1.5 relative group`}
-            >
-              <div className={`flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider ${addedDeals.includes(deal.id) ? 'text-bamboo-green' : 'text-red-500'}`}>
-                {addedDeals.includes(deal.id) ? (
-                  <><CheckCircle2 className="w-3 h-3" /> Added</>
-                ) : (
-                  <><Store className="w-3 h-3" /> {deal.storeName}</>
-                )}
+        <p className="text-xs text-zinc-400 mb-4">
+          Select an active item or popular essential, or type below to instantly search flyer deals.
+        </p>
+
+        {/* Dynamic Inner Search Bar */}
+        <div className="relative mb-5">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+            <Search className="w-4 h-4" />
+          </div>
+          <input
+            type="text"
+            placeholder="Type to search custom item (e.g. Salmon, Tofu)..."
+            value={priceMatcherSearch}
+            onChange={(e) => {
+              setPriceMatcherSearch(e.target.value);
+              // Auto-expand if the query is typed
+              if (e.target.value.trim().length > 1) {
+                setExpandedPriceMatcherItem(e.target.value.trim());
+              } else {
+                setExpandedPriceMatcherItem(null);
+              }
+            }}
+            className="w-full pl-10 pr-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 rounded-[12px] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-red-500/20 focus:border-red-500 transition-all text-ink-black dark:text-zinc-200 placeholder:text-zinc-450"
+          />
+        </div>
+
+        {/* Accordion List Container */}
+        <div className="space-y-3">
+          {/* Group 1: Active To-Buy Items */}
+          {itemsToDisplay.toBuy.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-red-500/80 mb-1 pl-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                {priceMatcherSearch.trim() ? 'Search Results' : 'Active To-Buy List Items'}
               </div>
-              <div className="font-bold text-sm leading-tight text-ink-black pr-6">
-                {deal.brand && <div className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">[{deal.brand}]</div>}
-                {deal.name}
+              <div className="grid grid-cols-1 gap-2">
+                {itemsToDisplay.toBuy.map((itemName) => {
+                  const isExpanded = expandedPriceMatcherItem?.toLowerCase() === itemName.toLowerCase();
+                  const lowestPast = getLowestHistoricalPrice(itemName);
+                  const isActiveToBuyItem = activeToBuy.some(n => n.toLowerCase() === itemName.toLowerCase());
+                  
+                  // Helper to parse available flyer sizes for dynamic tiering
+                  const getAvailableSizes = (itName: string): string[] => {
+                    const normItem = itName.toLowerCase();
+                    const dbMatches = VANCOUVER_FLYER_DATABASE.filter(item => 
+                      item.name.toLowerCase().includes(normItem) ||
+                      normItem.includes(item.name.toLowerCase())
+                    );
+                    const sizes = Array.from(new Set(dbMatches.map(m => m.raw_unit_text).filter(Boolean)));
+                    if (sizes.length === 0) {
+                      return [parseSizeOrTier(itName) === 'per-lb' ? 'lb' : ''];
+                    }
+                    return sizes;
+                  };
+
+                  const availableSizes = getAvailableSizes(itemName);
+                  const currentSize = selectedSizeByItem[itemName] || (() => {
+                    if (lowestPast) {
+                      const pastTier = parseSizeOrTier(lowestPast.name, lowestPast.price, lowestPast.quantityBought);
+                      const bestMatch = availableSizes.find(s => parseSizeOrTier(itemName, undefined, s) === pastTier);
+                      if (bestMatch) return bestMatch;
+                    }
+                    return availableSizes[0];
+                  })();
+
+                  const deals = getVancouverStoreDeals(itemName, undefined, currentSize);
+
+                  return (
+                    <div 
+                      key={itemName} 
+                      className={`border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-red-200 dark:border-red-950/50 shadow-md bg-zinc-50/50 dark:bg-zinc-900/30' : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900'}`}
+                    >
+                      {/* Accordion Row Header */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedPriceMatcherItem(isExpanded ? null : itemName)}
+                        className="w-full flex items-center justify-between p-3.5 text-left focus:outline-none"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 mr-2">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isExpanded ? 'bg-red-50 dark:bg-red-950/20 text-red-500' : 'bg-zinc-50 dark:bg-zinc-850 text-zinc-500'}`}>
+                            {getCategoryIcon(deals[0]?.category || suggestCategory(itemName) || 'Pantry')}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-sm text-ink-black dark:text-zinc-200 truncate pr-1">
+                              {itemName}
+                            </h4>
+                            <p className="text-[10px] text-zinc-400 font-medium">
+                              {isActiveToBuyItem ? 'Active shopping item' : 'Matching flyer essential'} • Expand deals
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {deals.length > 0 && (
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/35 px-2 py-0.5 rounded-full shrink-0">
+                              From {formatPriceForDisplay(deals[0].price)}{deals[0].raw_unit_text ? ` / ${deals[0].raw_unit_text}` : ''}
+                            </span>
+                          )}
+                          <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-red-500' : ''}`} />
+                        </div>
+                      </button>
+
+                      {/* Accordion Detail View */}
+                      {isExpanded && (
+                        <div className="p-4 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/15 dark:bg-zinc-900/20 space-y-3.5 animate-in slide-in-from-top-1 duration-200">
+                          {/* Historical Best Price comparison */}
+                          {lowestPast ? (
+                            <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/20 rounded-xl border border-indigo-100/40 dark:border-indigo-900/30 text-xs text-indigo-900 dark:text-indigo-200 flex items-start gap-2.5 shadow-sm">
+                              <span className="shrink-0 text-sm leading-none mt-0.5">💡</span>
+                              <div>
+                                <span className="font-medium text-indigo-850 dark:text-indigo-305">Your Personal Lowest Past Price:</span>{' '}
+                                <strong className="font-bold text-indigo-950 dark:text-indigo-100">{formatPrice(lowestPast.price)}</strong> at <span className="font-medium">{lowestPast.storeName}</span>
+                                {lowestPast.quantityBought && (
+                                  <span className="ml-1.5 px-1.5 py-0.5 text-[9px] bg-indigo-150/50 dark:bg-indigo-900/50 text-indigo-750 dark:text-indigo-300 font-bold rounded">
+                                    Size Unit: {lowestPast.quantityBought}
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-indigo-500/90 dark:text-indigo-400 block mt-0.5 font-medium">
+                                  Benchmark from purchase on {new Date(lowestPast.purchaseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-zinc-105/50 dark:bg-zinc-850/40 rounded-xl border border-zinc-200/40 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-2 shadow-sm">
+                              <span className="shrink-0 text-sm leading-none">💡</span>
+                              <span>No personal purchase history recorded yet. Add to list and buy to track personal benchmarks!</span>
+                            </div>
+                          )}
+
+                          {/* Dynamic Size Variant Switcher Selector Tabs */}
+                          {availableSizes.length > 1 && (
+                            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-zinc-100/60 dark:bg-zinc-800/60 rounded-xl w-fit">
+                              <span className="text-[9px] font-bold uppercase text-zinc-450 dark:text-zinc-500 px-2 tracking-wider">Sizes available:</span>
+                              {availableSizes.map(sz => {
+                                const isSelected = currentSize === sz;
+                                return (
+                                  <button
+                                    key={sz}
+                                    type="button"
+                                    onClick={() => setSelectedSizeByItem(prev => ({ ...prev, [itemName]: sz }))}
+                                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-transform duration-200 hover:scale-[1.03] ${
+                                      isSelected
+                                        ? 'bg-red-500 text-white shadow-xs'
+                                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-750'
+                                    }`}
+                                  >
+                                    {sz}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Live Flyer Deals comparison */}
+                          <div className="space-y-2">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-405 pl-1 mb-1.5">
+                              {currentSize ? `Vancouver Flyer Prices for ${currentSize} (sorted low to high)` : 'Vancouver Flyer Prices (sorted low to high)'}
+                            </div>
+                            {deals.map((deal, idx) => {
+                              const isCheapest = idx === 0;
+                              const isAdded = addedDeals.includes(deal.id);
+                              const displayStore = deal.storeName === 'Real Canadian Superstore' ? 'Superstore' : deal.storeName;
+
+                              return (
+                                <div 
+                                  key={deal.id} 
+                                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                                    isCheapest 
+                                      ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/50' 
+                                      : 'bg-white dark:bg-zinc-850/40 border-zinc-150 dark:border-zinc-800'
+                                  } transition-all`}
+                                >
+                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1 mr-3">
+                                    <span className={`text-xs font-sans truncate shrink-0 ${isCheapest ? 'text-emerald-900 dark:text-emerald-300 font-bold' : 'text-zinc-750 dark:text-zinc-300'}`}>
+                                      {displayStore} ── {deal.brand ? `[${deal.brand}] ` : ''}{deal.name} ({deal.pack_multiplier} {deal.base_unit}) ── ${deal.price.toFixed(2)} (${deal.normalized_unit_price < 0.01 ? deal.normalized_unit_price.toFixed(4) : deal.normalized_unit_price.toFixed(2)} / 1{deal.base_unit}) {isCheapest && '🟢'}
+                                    </span>
+                                    {isCheapest && (
+                                      <span className="text-[9px] font-extrabold uppercase tracking-widest bg-emerald-100 dark:bg-emerald-900/40 text-emerald-750 dark:text-emerald-300 px-1.5 py-0.5 rounded-[4px] shrink-0">
+                                        Best Price
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleAddVancouverDeal(deal); }}
+                                    disabled={isAdded}
+                                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all border shrink-0 ${
+                                      isAdded 
+                                        ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200' 
+                                        : 'bg-white dark:bg-zinc-800 text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-95 shadow-sm'
+                                    }`}
+                                    title={isAdded ? "Added to shopping list" : "Instant Add"}
+                                  >
+                                    {isAdded ? (
+                                      <CheckSquare className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <Plus className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="text-sm font-bold text-zinc-500 bg-red-50 px-2 py-0.5 rounded-md self-start">{deal.price}</div>
-              
-              <button
-                type="button"
-                onClick={() => handleAddFlyerDeal(deal)}
-                disabled={addedDeals.includes(deal.id)}
-                className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  addedDeals.includes(deal.id) 
-                    ? 'bg-green-100 text-bamboo-green' 
-                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:scale-105 active:scale-95'
-                }`}
-              >
-                {addedDeals.includes(deal.id) ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              </button>
             </div>
-          ))}
+          )}
+
+          {/* Fallback empty view when no matches are found */}
+          {itemsToDisplay.toBuy.length === 0 && (
+            <div className="p-8 text-center bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 animate-in fade-in">
+              <Search className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-2" />
+              <p className="text-zinc-500 text-xs font-semibold">
+                No matching product found for "{priceMatcherSearch}"
+              </p>
+              <p className="text-zinc-400 text-[10px] mt-1">
+                Try searching a different item name like milk, cabbage, eggs, or spinach.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -609,38 +1175,7 @@ export default function ShoppingList({
               onChange={(e) => setNewItemName(e.target.value)}
               className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:border-zinc-400 transition-colors"
             />
-            {suggestedDeals.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-zinc-200 rounded-[12px] shadow-lg z-20 overflow-hidden">
-                {suggestedDeals.map(deal => (
-                  <button
-                    key={deal.id}
-                    type="button"
-                    onClick={() => {
-                      handleAddFlyerDeal(deal);
-                      setNewItemName('');
-                    }}
-                    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-zinc-50 border-b border-zinc-100 last:border-0 transition-colors"
-                  >
-                    <div>
-                      <div className="font-bold text-sm text-ink-black flex items-center gap-2">
-                        <span>
-                          {deal.brand && <span className="text-[10px] text-zinc-400 uppercase tracking-widest mr-1.5 font-medium">[{deal.brand}]</span>}
-                          {deal.name}
-                        </span>
-                        <span className="text-[10px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">{deal.price}</span>
-                      </div>
-                      <div className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5">
-                        <Store className="w-3 h-3" /> {deal.storeName}
-                      </div>
-                    </div>
-                    <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-500 flex items-center justify-center">
-                      <Plus className="w-4 h-4" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {priceHistoryText && !suggestedDeals.length && (
+            {priceHistoryText && (
               <span className="text-[10px] text-zinc-500 font-medium px-2 pt-1.5 flex items-center gap-1">
                 <Crown className="w-3 h-3 text-bamboo-green" /> {priceHistoryText}
               </span>
@@ -704,74 +1239,7 @@ export default function ShoppingList({
             </div>
           </div>
         </form>
-
-        <label className="mt-4 w-full py-4 border border-dashed border-emerald-200 bg-emerald-50/10 rounded-[12px] flex items-center justify-center gap-2.5 text-emerald-500 hover:text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all font-sans group cursor-pointer relative overflow-hidden">
-           <input type="file" accept="image/*" onChange={handleScanReceipt} className="hidden" disabled={isScanningReceipt} />
-           {isScanningReceipt ? (
-              <div className="flex items-center gap-2.5">
-                 <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Scanning Receipt...</span>
-              </div>
-           ) : (
-              <div className="flex items-center gap-2.5">
-                 <Receipt className="w-4 h-4" />
-                 <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Scan Receipt (Bulk Import)</span>
-              </div>
-           )}
-        </label>
       </section>
-
-      {/* Receipt Modal */}
-      <AnimatePresence>
-        {receiptResult && (
-          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              className="bg-white w-full max-w-md rounded-t-[28px] sm:rounded-[20px] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]"
-            >
-              <div className="p-6 border-b border-zinc-100 flex justify-between items-center bg-zinc-50">
-                <div>
-                   <h3 className="text-xl font-bold text-ink-black flex items-center gap-2">
-                     <CheckSquare className="w-5 h-5 text-emerald-500" />
-                     {receiptResult.storeName || "Receipt Result"}
-                   </h3>
-                   <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{receiptResult.date || "Unknown Date"} • {receiptResult.items?.length || 0} items</span>
-                </div>
-                <button 
-                  onClick={() => setReceiptResult(null)}
-                  className="p-1.5 text-zinc-400 hover:text-ink-black transition-colors shrink-0"
-                >
-                  <Plus className="w-5 h-5 rotate-45" />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto flex-1 space-y-4 font-sans max-h-[50vh]">
-                 {receiptResult.items?.map((item: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between bg-zinc-50 border border-zinc-100 p-3 rounded-xl">
-                       <div className="min-w-0 pr-4 flex-1">
-                          <h4 className="font-semibold text-sm text-ink-black truncate">{item.name}</h4>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{item.quantity}</span>
-                       </div>
-                       <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md shrink-0">
-                          {item.price !== undefined ? `$${item.price}` : 'Unknown'}
-                       </span>
-                    </div>
-                 ))}
-              </div>
-              <div className="p-6 border-t border-zinc-100">
-                <button 
-                  onClick={confirmReceiptImport}
-                  className="w-full py-4 bg-ink-black text-white rounded-[16px] text-xs font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors shadow-sm"
-                >
-                  Import {receiptResult.items?.length} Items
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Part 2: Active To-Buy List */}
       <section className="mb-12">
@@ -1125,9 +1593,9 @@ export default function ShoppingList({
         {editingHistoryItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
-              initial={{ bg: 'rgba(255,255,255,0)' }}
-              animate={{ bg: 'rgba(255,255,255,0.8)' }}
-              exit={{ bg: 'rgba(255,255,255,0)' }}
+              initial={{ backgroundColor: 'rgba(255,255,255,0)' }}
+              animate={{ backgroundColor: 'rgba(255,255,255,0.8)' }}
+              exit={{ backgroundColor: 'rgba(255,255,255,0)' }}
               className="absolute inset-0 backdrop-blur-sm"
               onClick={() => setEditingHistoryItem(null)}
             />
@@ -1158,6 +1626,18 @@ export default function ShoppingList({
                       onChange={(e) => setEditingHistoryItem({...editingHistoryItem, storeName: e.target.value})}
                       className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
                     />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2">Category</label>
+                    <select
+                      value={editingHistoryItem.category}
+                      onChange={(e) => setEditingHistoryItem({...editingHistoryItem, category: e.target.value})}
+                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-300 transition-all font-medium text-ink-black"
+                    >
+                      {categories.filter(c => c !== 'All Items').map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

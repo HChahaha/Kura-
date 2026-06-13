@@ -96,45 +96,6 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
       </header>
 
       <form className="space-y-12 px-2" onSubmit={handleSubmit}>
-        {/* Photo Preview */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative aspect-video rounded-[32px] overflow-hidden border border-zinc-100 group shadow-lg"
-        >
-          <img 
-            src={image || (name ? getFoodImage(name, category) : getFoodImage('food', category))} 
-            alt={name || 'New Item'} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent flex items-end p-6 gap-2">
-            <button 
-              type="button"
-              onClick={handleRefreshImage}
-              className="px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/40 transition-all flex items-center gap-2"
-            >
-              <RotateCcw className="w-3 h-3" />
-              Random Image
-            </button>
-            <label className="px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/40 transition-all flex items-center gap-2 cursor-pointer">
-              <Upload className="w-3 h-3" />
-              Upload Photo
-              <input 
-                type="file" 
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setImage(URL.createObjectURL(file));
-                  }
-                }}
-              />
-            </label>
-          </div>
-        </motion.div>
-
         {/* Main Input */}
         <div className="space-y-6">
           <input 
@@ -142,16 +103,16 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
             placeholder="What are you adding?"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-transparent border-0 border-b border-zinc-100 py-6 text-3xl font-light placeholder:text-zinc-200 focus:ring-0 focus:border-ink-black transition-all duration-500 text-ink-black"
+            className="w-full bg-transparent border-0 border-b border-zinc-100 py-6 text-3xl font-bold placeholder:text-zinc-200 focus:ring-0 focus:border-ink-black transition-all duration-500 text-ink-black"
           />
           <div className="flex flex-wrap gap-2 items-center pt-2">
-            <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest mr-2 font-sans">Frequent:</span>
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mr-2 font-sans">Frequent:</span>
             {['Oat Milk', 'Avocados', 'Miso Paste', 'Eggs', 'Tofu'].map(tag => (
               <button 
                 key={tag} 
                 type="button" 
                 onClick={() => setName(tag)}
-                className={`px-4 py-1.5 border rounded-[12px] text-[10px] font-bold uppercase tracking-widest transition-all ${
+                className={`px-4 py-1.5 border rounded-[12px] text-[11px] font-extrabold uppercase tracking-widest transition-all ${
                   name === tag ? 'bg-ink-black border-ink-black text-white shadow-md' : 'bg-washi-gray border-zinc-100 text-zinc-400 hover:text-ink-black'
                 }`}
               >
@@ -399,20 +360,15 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
       </form>
 
       {/* Sustainable Tip Card */}
-      <section className="mt-24 px-2">
-        <div className="bg-washi-gray border border-zinc-50 rounded-[12px] overflow-hidden flex flex-col md:flex-row items-center p-2 relative group">
-          <div className="w-full md:w-48 h-48 rounded-[8px] overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400" className="w-full h-full object-cover grayscale-[0.5] opacity-80" alt="Stock" referrerPolicy="no-referrer" />
+      <section className="mt-20 px-2 animate-in fade-in">
+        <div className="bg-washi-gray dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-[16px] p-6 group">
+          <div className="flex items-center gap-2 mb-3">
+            <Leaf className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-bold text-ink-black">Sustainable Stock</h3>
           </div>
-          <div className="p-8 flex-1">
-             <div className="flex items-center gap-2 mb-3">
-               <Leaf className="w-4 h-4 text-green-600" />
-               <h3 className="text-lg font-light text-ink-black">Sustainable Stock</h3>
-             </div>
-             <p className="text-zinc-400 text-xs leading-relaxed">
-               Maintain balance in your kitchen through mindful logging. Tracking expiry dates reduces waste and honors the source.
-             </p>
-          </div>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+            Maintain balance in your kitchen through mindful logging. Tracking expiry dates reduces waste and honors the source.
+          </p>
         </div>
       </section>
     </motion.div>

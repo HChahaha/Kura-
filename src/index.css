@@ -77,3 +77,8 @@
   scrollbar-width: none;
 }
 
+div#root:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > header:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1) {
+  background-color: #27aff4 !important;
+}
+
+

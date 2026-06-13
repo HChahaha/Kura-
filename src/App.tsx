@@ -12,7 +12,6 @@ import RecipeDetail from './pages/RecipeDetail';
 import AddRecipe from './pages/AddRecipe';
 import Settings from './pages/Settings';
 import Auth from './pages/Auth';
-import { OnboardingTour } from './components/OnboardingTour';
 import { INVENTORY_ITEMS } from './constants';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { getFoodImage, getNormalShelfLife } from './lib/imageUtils';
@@ -735,8 +734,6 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        <OnboardingTour currentView={currentView} onViewChange={handleViewChange} />
 
         <BottomNav currentView={currentView} onViewChange={handleViewChange} />
       </div>

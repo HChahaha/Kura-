@@ -201,7 +201,8 @@ app.post("/api/scan-receipt", async (req, res) => {
                  properties: {
                    name: { type: Type.STRING },
                    price: { type: Type.NUMBER },
-                   quantity: { type: Type.STRING, description: "Quantity or weight like '1', '0.5 kg', '2 lbs' etc" }
+                   quantity: { type: Type.STRING, description: "Quantity or weight like '1', '0.5 kg', '2 lbs' etc" },
+                   category: { type: Type.STRING, description: "Best category from: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household" }
                  }
                }
              }
@@ -213,6 +214,63 @@ app.post("/api/scan-receipt", async (req, res) => {
     res.json(JSON.parse(response.text || "{}"));
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to scan receipt" });
+  }
+});
+
+app.post("/api/generate-recipe", async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ error: "No inventory items available to suggest recipes." });
+    }
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const parts = [
+      { text: `You are an expert home cook. Suggest ONE delicious, foolproof, simple home-cooked meal recipe that utilizes one or more of the following available ingredients: ${ingredients.join(", ")}. Complement with basic pantry items if necessary. Return the response in structured JSON with recipe title, ingredients, step-by-step instructions (cooking steps), and preparation time.` }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "Name/title of the recipe" },
+            ingredients: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Ingredient name" },
+                  quantity: { type: Type.STRING, description: "Quantity or weight (e.g., '1 cup', '150g', '2 units')" }
+                }
+              }
+            },
+            instructions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING, description: "Clear cooking steps" }
+            },
+            time: { type: Type.STRING, description: "Preparation/cooking time (e.g. '20 mins')" }
+          }
+        }
+      }
+    });
+
+    res.json(JSON.parse(response.text || "{}"));
+  } catch (error: any) {
+    console.error("Recipe generation fail:", error);
+    res.status(500).json({ error: error.message || "Failed to generate recipe" });
   }
 });
 

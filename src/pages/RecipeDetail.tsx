@@ -97,6 +97,7 @@ export default function RecipeDetail({
   const [editedName, setEditedName] = useState('');
   const [editedIngredients, setEditedIngredients] = useState<{ name: string; quantity: string }[]>([]);
   const [editedInstructions, setEditedInstructions] = useState<string[]>([]);
+  const [isHeartOptimistic, setIsHeartOptimistic] = useState(false);
 
   // Sync edits when tempRecipe changes
   React.useEffect(() => {
@@ -105,6 +106,7 @@ export default function RecipeDetail({
       setEditedIngredients((recipe.fullIngredients || []).map((ing: any) => ({ name: ing.name || '', quantity: ing.quantity || '' })));
       setEditedInstructions(recipe.instructions || recipe.steps || []);
     }
+    setIsHeartOptimistic(false);
   }, [recipe]);
 
   const activeRecipe = useMemo(() => {
@@ -121,6 +123,7 @@ export default function RecipeDetail({
 
   const isSaved = useMemo(() => {
     if (!activeRecipe) return false;
+    if (activeRecipe.isUserCreated && !activeRecipe.isTempSuggestion) return true;
     return savedRecipeIds.includes(activeRecipe.id);
   }, [activeRecipe, savedRecipeIds]);
 
@@ -384,37 +387,35 @@ export default function RecipeDetail({
             </button>
           )}
 
-          {onToggleSaveRecipe && !activeRecipe.isUserCreated && (
+          {onToggleSaveRecipe && (
             <button 
-              onClick={() => onToggleSaveRecipe(activeRecipe.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (activeRecipe.isTempSuggestion) {
+                  if (onSaveTempRecipe) {
+                    setIsHeartOptimistic(true);
+                    onSaveTempRecipe(activeRecipe);
+                  }
+                } else {
+                  onToggleSaveRecipe(activeRecipe.id);
+                }
+              }}
               className="w-8 h-8 rounded-full flex items-center justify-center bg-white/40 hover:bg-white border border-zinc-100 shadow-sm text-zinc-400 hover:text-red-500 transition-all active:scale-95 cursor-pointer"
-              title={isSaved ? "Remove from saved recipes" : "Save recipe"}
+              title={(isSaved || isHeartOptimistic) ? "Remove from saved recipes" : "Save recipe"}
             >
-              <Heart className={`w-4 h-4 transition-transform ${isSaved ? 'text-red-500 fill-red-500 scale-110' : 'text-zinc-400'}`} />
+              <Heart className={`w-4 h-4 transition-transform ${(isSaved || isHeartOptimistic) ? 'text-red-500 fill-red-500 scale-110' : 'text-zinc-400'}`} />
             </button>
           )}
         </div>
       </header>
-
-      <div className="relative min-h-[40vh] w-full pt-28 pb-10 bg-zinc-950 text-white px-8 flex flex-col justify-end">
-        <div className="relative">
-          {activeRecipe.isTempSuggestion && onSaveTempRecipe ? (
-            <div className="mb-4 p-4 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 flex justify-between items-center text-white" id="temp-ai-save-banner">
-              <div className="pr-3">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#38bdf8] block mb-0.5 animate-pulse">Gemini Smart Suggested</span>
-                <p className="text-xs font-semibold leading-tight text-zinc-100">Keep this recipe in Cookbook?</p>
-              </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSaveTempRecipe(activeRecipe);
-                }}
-                className="px-4 py-2 bg-[#38bdf8] text-black hover:bg-sky-450 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-sans"
-              >
-                Save Recipe
-              </button>
-            </div>
-          ) : activeRecipe.isAiSuggested ? (
+ 
+       <div className="relative min-h-[40vh] w-full pt-28 pb-10 bg-zinc-950 text-white px-8 flex flex-col justify-end">
+         <div className="relative">
+           {activeRecipe.isTempSuggestion ? (
+             <div className="mb-4 p-3 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/25 text-[#38bdf8] text-center" id="temp-ai-save-banner">
+               <span className="text-[9px] font-black uppercase tracking-widest block animate-pulse">✦ Gemini Smart Suggested ✦</span>
+             </div>
+           ) : activeRecipe.isAiSuggested ? (
             <span className="inline-flex items-center gap-1 bg-indigo-600 text-white text-[9px] uppercase font-extrabold tracking-widest px-3 py-1 rounded-full mb-4 shadow border border-indigo-500">
               <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse animate-duration-1000" /> AI Spark Suggestion
             </span>

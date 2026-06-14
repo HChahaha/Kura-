@@ -625,6 +625,13 @@ export default function App() {
                 id: permanentId,
                 isTempSuggestion: false,
                 isUserCreated: true,
+                title: r.name, // clean, parsed JSON title field
+                ingredients: (r.fullIngredients || []).map((ing: any) => ({
+                  name: ing.name || '',
+                  quantity: ing.quantity || ''
+                })), // clean, parsed JSON ingredients array
+                steps: r.instructions || r.steps || [], // clean, parsed JSON steps array
+                source: "AI_Suggestion", // Tag origin
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
               };
@@ -632,7 +639,7 @@ export default function App() {
                 await setDoc(doc(db, `users/${user.uid}/recipes`, permanentId), permanentRecipe);
                 setSavedRecipeIds(prev => [...prev, permanentId]);
                 setSelectedRecipeId(permanentId);
-                triggerNotification('Recipe successfully saved to Cookbook!');
+                triggerNotification('Saved to All Creations');
               } catch (err) {
                 console.error("Error saving temp recipe:", err);
                 triggerNotification('Failed to save recipe');

@@ -4,7 +4,7 @@ import { Search, Plus, BookOpen, Clock, Flame, Trash2, Sparkles, Loader2, AlertC
 import { InventoryItem } from '../types';
 import { getRemainingRecipes, incrementRecipes } from '../lib/limits';
 import { auth, db } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface RecipesProps {
   inventory: InventoryItem[];
@@ -13,6 +13,7 @@ interface RecipesProps {
   onViewChange: (view: any) => void;
   onSelectRecipe: (id: string) => void;
   onDeleteRecipe: (id: string) => void;
+  onSuggestRecipe?: (recipe: any) => void;
 }
 
 export default function Recipes({ 
@@ -21,7 +22,8 @@ export default function Recipes({
   lastAddedIngredient, 
   onViewChange, 
   onSelectRecipe, 
-  onDeleteRecipe
+  onDeleteRecipe,
+  onSuggestRecipe
 }: RecipesProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState("All");
@@ -60,12 +62,10 @@ export default function Recipes({
       setIsAiLoading(true);
       setAiError(null);
 
-      const ingredientsList = inventory.map(item => `${item.name} (${item.quantity || 'some'})`);
-      
       const res = await fetch('/api/generate-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: ingredientsList })
+        body: JSON.stringify({ inventory })
       });
 
       if (!res.ok) {
@@ -79,15 +79,15 @@ export default function Recipes({
       const newRemaining = await incrementRecipes(userId);
       setRemainingRecipes(newRemaining);
 
-      // Save to database as custom recipe
-      const recipeId = `ai-${Math.random().toString(36).substring(7)}`;
+      // Create a temporary suggest recipe that will only be saved permanently if user chooses "Save Recipe"
+      const recipeId = 'temp-ai-suggestion';
       const recipeDoc = {
         id: recipeId,
         name: data.title || "AI Suggested Creation",
         image: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=800",
-        description: `Recommended automatically by Kura AI based on ingredients in your kitchen cabinet.`,
+        description: `Custom-crafted recipe using what's currently in your kitchen inventory, created with Gemini AI.`,
         time: data.time || "20 mins",
-        calories: 0,
+        calories: data.calories || 0,
         servings: "2",
         difficulty: "Easy",
         protein: "0g",
@@ -99,21 +99,23 @@ export default function Recipes({
           name: ing.name || '',
           quantity: ing.quantity || ''
         })),
-        instructions: data.instructions || [],
-        isUserCreated: true,
+        instructions: data.steps || data.instructions || [],
+        isUserCreated: false,
         isAiSuggested: true,
-        userId: userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        isTempSuggestion: true,
+        userId: userId
       };
 
-      if (userId) {
-        await setDoc(doc(db, `users/${userId}/recipes`, recipeId), recipeDoc);
+      if (onSuggestRecipe) {
+        onSuggestRecipe(recipeDoc);
+      } else {
+        // Fallback save to db directly
+        if (userId) {
+          await setDoc(doc(db, `users/${userId}/recipes`, recipeId), recipeDoc);
+        }
+        onSelectRecipe(recipeId);
+        onViewChange('recipe-detail');
       }
-
-      // Go directly to recipe detail view!
-      onSelectRecipe(recipeId);
-      onViewChange('recipe-detail');
       
     } catch (err: any) {
       console.error(err);
@@ -169,24 +171,23 @@ export default function Recipes({
           </div>
         )}
 
-        {/* 2-Column Banner Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {/* Banner Options exactly side-by-side with identical heights */}
+        <div className="grid grid-cols-2 gap-3.5 mb-8">
           {/* Create Your Own Recipe Banner */}
           <div 
             onClick={() => onViewChange('add-recipe')}
-            className="bg-ink-black text-white p-6 rounded-[24px] border border-zinc-900 flex flex-col justify-between hover:bg-zinc-850 duration-250 transition-all cursor-pointer shadow-sm group min-h-[170px]"
+            className="flex flex-col justify-between p-4.5 rounded-[22px] bg-[#27272a] text-white border border-zinc-750/70 hover:bg-[#3f3f46] min-h-[165px] shadow-sm transition-all duration-300 cursor-pointer group hover:scale-[1.01] hover:-translate-y-0.5"
             id="create-recipe-banner"
           >
             <div>
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1 block">Notebook draft</span>
-              <h2 className="text-lg font-light tracking-tight mb-2">Create Custom Recipe</h2>
-              <p className="text-[11px] text-zinc-400 font-light leading-snug">
-                Write names & instructions manually to archive your personal kitchen secrets.
+              <span className="text-[9px] font-extrabold uppercase tracking-[0.25em] text-zinc-400 mb-1 block">Notebook Draft</span>
+              <h2 className="text-sm font-bold tracking-tight mb-1 text-white">What I wanna cook</h2>
+              <p className="text-[11px] text-zinc-300 font-normal leading-relaxed">
+                Record recipes. Link, screenshot or type; AI auto-fills.
               </p>
             </div>
-            <div className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-white">
-              <span>Begin Scribing</span>
-              <Plus className="w-3.5 h-3.5 text-white stroke-[2.5px]" />
+            <div className="mt-3 px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-750 text-white rounded-full inline-flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest transition-all duration-200 w-fit">
+              <span>Create +</span>
             </div>
           </div>
 
@@ -194,36 +195,44 @@ export default function Recipes({
           <button 
             disabled={isAiLoading || remainingRecipes <= 0}
             onClick={generateAiRecipe}
-            className={`text-left p-6 rounded-[24px] border transition-all flex flex-col justify-between min-h-[170px] ${
+            className={`text-left p-4.5 rounded-[22px] transition-all duration-300 flex flex-col justify-between min-h-[165px] ${
               remainingRecipes <= 0 
-                ? 'bg-zinc-50 border-zinc-200 text-zinc-400 cursor-not-allowed opacity-60 shadow-none'
-                : 'bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700 cursor-pointer shadow group'
+                ? 'bg-zinc-200/50 border-zinc-300 text-zinc-400 cursor-not-allowed opacity-60 shadow-none'
+                : 'bg-[#f4f4f0] text-[#18181b] border border-zinc-300/40 hover:bg-[#ebebe5] hover:border-zinc-300 shadow-sm cursor-pointer hover:scale-[1.01] hover:-translate-y-0.5 group'
             }`}
           >
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className={`text-[9px] font-bold uppercase tracking-[0.2em] block ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-indigo-200'}`}>Gemini Smart</span>
-                <span className={`text-[8px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded ${remainingRecipes <= 0 ? 'bg-zinc-200 text-zinc-500' : 'bg-white/10 text-indigo-100'}`}>
+            <div className="w-full">
+              <div className="flex justify-between items-center mb-1 gap-2 flex-wrap sm:flex-nowrap">
+                <span className={`text-[9px] font-extrabold uppercase tracking-[0.25em] block ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-zinc-500'}`}>Gemini Smart</span>
+                <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                  remainingRecipes <= 0 
+                    ? 'bg-zinc-200 text-zinc-400 border border-zinc-300' 
+                    : 'bg-zinc-200/60 text-zinc-700 border border-zinc-250/80'
+                }`}>
                    {remainingRecipes} Left today
                 </span>
               </div>
-              <h2 className={`text-lg font-light tracking-tight mb-2 ${remainingRecipes <= 0 ? 'text-zinc-500' : 'text-white'}`}>AI Smart Suggest</h2>
-              <p className={`text-[11px] font-light leading-snug ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-indigo-100'}`}>
+              <h2 className={`text-sm font-bold tracking-tight mb-1 ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-[#18181b]'}`}>Give me an idea</h2>
+              <p className={`text-[11px] font-normal leading-relaxed ${remainingRecipes <= 0 ? 'text-zinc-500' : 'text-zinc-650'}`}>
                 {isAiLoading
-                  ? 'Consulting kitchen experts in Gemini...'
-                  : 'AI automatically crafts a delicious home recipe optimized precisely for your active cabinet ingredients.'}
+                  ? 'Consulting kitchen experts...'
+                  : "AI crafts a custom recipe using your ingredient stock."}
               </p>
             </div>
-            <div className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest">
+            <div className={`mt-3 px-2.5 py-1.5 rounded-full inline-flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest transition-all duration-200 w-fit ${
+              remainingRecipes <= 0 
+                ? 'bg-zinc-200 text-zinc-400' 
+                : 'bg-[#18181b] text-[#f4f4f0] hover:bg-zinc-800'
+            }`}>
               {isAiLoading ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Suggesting Recipe...</span>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Thinking...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Generate AI Recommendation</span>
+                  <Sparkles className="w-3 h-3" />
+                  <span>Ask AI ✦</span>
                 </>
               )}
             </div>

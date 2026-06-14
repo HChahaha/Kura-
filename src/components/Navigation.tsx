@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutGrid, BookOpen, Settings, Camera, Plus, ReceiptText, ShoppingBag, Bell, Calendar, ShoppingCart, CheckCircle2, Home, ChefHat, Archive } from 'lucide-react';
 import { View, InventoryItem, ShoppingItem } from '../types';
+import KuraLogo from './KuraLogo';
 
 interface NavigationProps {
   currentView: View;
@@ -20,10 +21,11 @@ export function TopBar({ currentView, onViewChange, inventory = [], shoppingList
   const alertCount = expiringItems.length + (uncheckedShopping.length > 0 ? 1 : 0);
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100 flex items-center justify-between px-6 h-16">
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-lg tracking-tight text-ink-black cursor-pointer" onClick={() => onViewChange('inventory')}>
-          KURA
+    <header className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100 flex items-center justify-between px-6 h-16">
+      <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onViewChange('inventory')}>
+        <KuraLogo className="w-6 h-6 text-ink-black" strokeWidth={3} />
+        <span className="font-bold text-base tracking-widest text-ink-black select-none uppercase">
+          Kura
         </span>
       </div>
       
@@ -131,8 +133,8 @@ export function TopBar({ currentView, onViewChange, inventory = [], shoppingList
 export function BottomNav({ currentView, onViewChange }: NavigationProps) {
   if (currentView === 'auth') return null;
   const navItems = [
-    { id: 'inventory', label: 'Inventory', icon: Archive },
     { id: 'shopping', label: 'To Buy', icon: ShoppingCart },
+    { id: 'inventory', label: 'Inventory', icon: Archive },
     { id: 'recipes', label: 'Recipes', icon: ChefHat },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -140,12 +142,12 @@ export function BottomNav({ currentView, onViewChange }: NavigationProps) {
   const isScanner = currentView === 'scanner';
 
   return (
-    <nav className={`fixed bottom-0 left-0 w-full z-50 transition-colors duration-500 ${
+    <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 transition-colors duration-500 ${
       isScanner 
         ? 'bg-black/20 backdrop-blur-md border-t border-white/10' 
         : 'bg-white/70 backdrop-blur-xl border-t border-zinc-100'
     } h-20 pb-safe`}>
-      <div className="flex justify-around items-center h-full max-w-md mx-auto">
+      <div className="flex justify-around items-center h-full max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;

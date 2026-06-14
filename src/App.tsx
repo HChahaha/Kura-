@@ -148,6 +148,7 @@ export default function App() {
     }
   };
   const [customRecipes, setCustomRecipes] = useState<any[]>([]);
+  const [tempRecipe, setTempRecipe] = useState<any | null>(null);
   const [lastAddedIngredient, setLastAddedIngredient] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>(['Dairy & Eggs', 'Vegetables', 'Meat & Seafood', 'Pantry', 'Grains', 'Fruits', 'Bakery', 'Frozen', 'Household']);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -462,6 +463,49 @@ export default function App() {
     }
   };
 
+  const handleConsumeItem = async (consumedId: string) => {
+    if (!user) return;
+    const itemToConsume = inventory.find(i => i.id === consumedId);
+    if (!itemToConsume) return;
+
+    // 1. Instant Frontend State Update: immediately filter out of active list so it vanishes instantly
+    setInventory(prev => prev.filter(item => item.id !== consumedId));
+
+    try {
+      // 2. Trigger To-Buy List Automation: when stock reaches 0, append to active "To-Buy List"
+      await deleteDoc(doc(db, `users/${user.uid}/inventory`, consumedId));
+
+      const shoppingId = Math.random().toString(36).substring(7);
+      const shoppingItemData: any = {
+        userId: user.uid,
+        name: itemToConsume.name,
+        category: itemToConsume.category || 'Uncategorized',
+        checked: false,
+        price: '',
+        storeName: itemToConsume.location || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(doc(db, `users/${user.uid}/shopping`, shoppingId), shoppingItemData);
+      
+      triggerNotification(`Consumed ${itemToConsume.name}. Added to To-Buy List!`);
+
+      // 3. Re-fetch or Optimistic UI/Cache Invalidation:
+      // Properly support queryClient cache invalidation if registered globally
+      if (typeof window !== 'undefined' && (window as any).queryClient) {
+        try {
+          (window as any).queryClient.invalidateQueries({ queryKey: ['inventory'] });
+          (window as any).queryClient.invalidateQueries({ queryKey: ['shopping'] });
+        } catch (cacheErr) {
+          console.warn("Query cache invalidation failed:", cacheErr);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/inventory/${consumedId}`);
+    }
+  };
+
   const handleUpdateShoppingList = (items: ShoppingItem[]) => {
     // We shouldn't use this mass update anymore, replacing with single operations below where needed
     setShoppingList(items);
@@ -503,6 +547,7 @@ export default function App() {
             onUpdateInventory={(items) => {
               setInventory(items);
             }}
+            onConsumeItem={handleConsumeItem}
           />
         );
       case 'shopping':
@@ -529,6 +574,11 @@ export default function App() {
             lastAddedIngredient={lastAddedIngredient}
             onViewChange={setCurrentView} 
             onSelectRecipe={setSelectedRecipeId}
+            onSuggestRecipe={(recipe) => {
+              setTempRecipe(recipe);
+              setSelectedRecipeId('temp-ai-suggestion');
+              setCurrentView('recipe-detail');
+            }}
             onDeleteRecipe={(id) => {
               const recipeToDelete = customRecipes.find(r => r.id === id);
               if (!recipeToDelete) return;
@@ -566,6 +616,28 @@ export default function App() {
               setEditingRecipeId(selectedRecipeId);
               setCurrentView('edit-recipe');
             }}
+            tempRecipe={tempRecipe}
+            onSaveTempRecipe={async (r) => {
+              if (!user) return;
+              const permanentId = `ai-${Math.random().toString(36).substring(7)}`;
+              const permanentRecipe = {
+                ...r,
+                id: permanentId,
+                isTempSuggestion: false,
+                isUserCreated: true,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              };
+              try {
+                await setDoc(doc(db, `users/${user.uid}/recipes`, permanentId), permanentRecipe);
+                setSavedRecipeIds(prev => [...prev, permanentId]);
+                setSelectedRecipeId(permanentId);
+                triggerNotification('Recipe successfully saved to Cookbook!');
+              } catch (err) {
+                console.error("Error saving temp recipe:", err);
+                triggerNotification('Failed to save recipe');
+              }
+            }}
           />
         );
       case 'add-recipe':
@@ -575,6 +647,7 @@ export default function App() {
           <AddRecipe 
             onViewChange={setCurrentView} 
             recipeToEdit={recipeToEdit}
+            userId={user?.uid}
             onSaveRecipe={async (r) => {
               if (!user) return;
               
@@ -636,6 +709,7 @@ export default function App() {
           }}
           onViewChange={setCurrentView}
           onUpdateInventory={setInventory}
+          onConsumeItem={handleConsumeItem}
         />;
     }
   };

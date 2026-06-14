@@ -81,7 +81,7 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="pb-32 pt-24 px-6 max-w-xl mx-auto"
+      className="pb-32 pt-24 px-6 max-w-lg mx-auto"
     >
       <header className="mb-16 px-2 flex justify-between items-start">
         <div>
@@ -123,7 +123,7 @@ export default function AddItem({ onViewChange, onAddItem, categories, onAddCate
         </div>
 
         {/* Form Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+        <div className="grid grid-cols-1 gap-y-10">
           {/* Quantity & Units */}
           <FormField label="Quantity">
             <div className="flex flex-col gap-3">

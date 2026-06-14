@@ -7,6 +7,28 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+
+function safeParseJson(text: string): any {
+  if (!text) return {};
+  let cleanText = text;
+  // Strip markdown formatting if Gemini wrapped the response
+  cleanText = cleanText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  
+  // Find the first { and last } to ensure we only parse the JSON object
+  const startIndex = cleanText.indexOf('{');
+  const endIndex = cleanText.lastIndexOf('}');
+  if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+    cleanText = cleanText.substring(startIndex, endIndex + 1);
+  }
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (e: any) {
+    console.error("JSON parse failed. Raw text length: " + text.length + ". Error: " + e.message);
+    throw new Error("AI response was cut off or contained invalid formatting. Please try again with shorter content or wait a moment.");
+  }
+}
+
 const PORT = 3000;
 
 app.use(express.json({ limit: "50mb" }));
@@ -44,7 +66,7 @@ app.post("/api/parse-recipe", async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: { parts },
       config: {
         responseMimeType: "application/json",
@@ -91,28 +113,10 @@ app.post("/api/parse-recipe", async (req, res) => {
             }
           }
         },
-      },
+      }
     });
 
-    let text = response.text || "{}";
-    // Strip markdown formatting if Gemini wrapped the response
-    text = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-    
-    // Find the first { and last } to ensure we only parse the JSON object
-    const startIndex = text.indexOf('{');
-    const endIndex = text.lastIndexOf('}');
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      text = text.substring(startIndex, endIndex + 1);
-    }
-    
-    let parsedData = {};
-    try {
-      parsedData = JSON.parse(text);
-    } catch (e) {
-      console.error("JSON parse failed. Raw text:", text);
-    }
-
-    res.json(parsedData);
+    res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     res.status(500).json({ error: error.message || "Failed to parse recipe" });
@@ -142,7 +146,7 @@ app.post("/api/scan-food", async (req, res) => {
     ];
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: { parts },
       config: {
         responseMimeType: "application/json",
@@ -156,7 +160,7 @@ app.post("/api/scan-food", async (req, res) => {
       }
     });
 
-    res.json(JSON.parse(response.text || "{}"));
+    res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to scan food" });
   }
@@ -185,7 +189,7 @@ app.post("/api/scan-receipt", async (req, res) => {
     ];
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: { parts },
       config: {
         responseMimeType: "application/json",
@@ -211,7 +215,7 @@ app.post("/api/scan-receipt", async (req, res) => {
       }
     });
 
-    res.json(JSON.parse(response.text || "{}"));
+    res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to scan receipt" });
   }
@@ -219,28 +223,62 @@ app.post("/api/scan-receipt", async (req, res) => {
 
 app.post("/api/generate-recipe", async (req, res) => {
   try {
-    const { ingredients } = req.body;
+    const { inventory, ingredients } = req.body;
     
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Gemini API key is missing." });
     }
 
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+    let primaryList: string[] = [];
+    let secondaryList: string[] = [];
+
+    if (Array.isArray(inventory) && inventory.length > 0) {
+      inventory.forEach((item: any) => {
+        const isExpiring = item.isExpiringSoon || (item.daysLeft !== undefined && item.daysLeft <= 2);
+        const qtyStr = item.quantity ? `: ${item.quantity}` : '';
+        const desc = `${item.name}${qtyStr}${isExpiring ? ' (EXPIRING SOON - MUST USE)' : ''}`;
+        
+        if (isExpiring) {
+          primaryList.push(desc);
+        } else {
+          secondaryList.push(desc);
+        }
+      });
+    }
+
+    // Fallback if no inventory passed but ingredients list is available
+    if (primaryList.length === 0 && secondaryList.length === 0 && Array.isArray(ingredients)) {
+      secondaryList = ingredients;
+    }
+
+    if (primaryList.length === 0 && secondaryList.length === 0) {
       return res.status(400).json({ error: "No inventory items available to suggest recipes." });
     }
+
+    const primaryStr = primaryList.length > 0 ? primaryList.join(", ") : "None specifically expiring soon";
+    const availableStr = secondaryList.length > 0 ? secondaryList.join(", ") : "None";
 
     const ai = new GoogleGenAI({ 
       apiKey: process.env.GEMINI_API_KEY,
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
     });
 
-    const parts = [
-      { text: `You are an expert home cook. Suggest ONE delicious, foolproof, simple home-cooked meal recipe that utilizes one or more of the following available ingredients: ${ingredients.join(", ")}. Complement with basic pantry items if necessary. Return the response in structured JSON with recipe title, ingredients, step-by-step instructions (cooking steps), and preparation time.` }
-    ];
+    const promptText = `You are an expert home cook. You MUST design ONE delicious, foolproof, simple home-cooked meal recipe based strictly around what the user CURRENTLY has in stock in their Kitchen Inventory.
+
+Kitchen Inventory:
+- PRIMARY INGREDIENTS (Expiring soon or priority items to clear): ${primaryStr}
+- OTHER AVAILABLE INGREDIENTS (In stock in cupboard/fridge): ${availableStr}
+
+Strict prompt instructions:
+1. You MUST prioritize using the PRIMARY INGREDIENTS as the absolute foundation of the recipe to help the user efficiently clear out their fridge before food goes bad.
+2. Minimize any external required ingredients to bare pantry staples only (like salt, pepper, oil, water).
+3. Do NOT suggest recipes requiring elaborate extra grocery items. Focus strictly on maximizing the use of what's provided above.
+
+Return the response strictly as a clean, minified JSON object matching this schema. do NOT include any markdown block formatting or introductory/conversational prose.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: { parts },
+      model: "gemini-3.5-flash",
+      contents: promptText,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -252,22 +290,25 @@ app.post("/api/generate-recipe", async (req, res) => {
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  name: { type: Type.STRING, description: "Ingredient name" },
-                  quantity: { type: Type.STRING, description: "Quantity or weight (e.g., '1 cup', '150g', '2 units')" }
-                }
-              }
+                  name: { type: Type.STRING, description: "Ingredient name string" },
+                  quantity: { type: Type.STRING, description: "Amount or quantity string" }
+                },
+                required: ["name", "quantity"]
+              },
+              description: "Distinct items and their exact quantities used in the recipe, prioritizing the provided inventory. Only add bare pantry staples (salt, water, oil, pepper) as secondary additions."
             },
-            instructions: {
+            steps: {
               type: Type.ARRAY,
-              items: { type: Type.STRING, description: "Clear cooking steps" }
-            },
-            time: { type: Type.STRING, description: "Preparation/cooking time (e.g. '20 mins')" }
-          }
+              items: { type: Type.STRING, description: "A simple ordered cooking step/action description" },
+              description: "Step-by-step preparation instructions"
+            }
+          },
+          required: ["title", "ingredients", "steps"]
         }
       }
     });
 
-    res.json(JSON.parse(response.text || "{}"));
+    res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
     console.error("Recipe generation fail:", error);
     res.status(500).json({ error: error.message || "Failed to generate recipe" });

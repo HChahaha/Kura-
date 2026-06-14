@@ -10,7 +10,7 @@ service cloud.firestore {
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isSignedIn() { return request.auth != null; }
     
     // Validation Helpers
     function isValidInventoryItem(data) {
@@ -64,6 +64,18 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidMetadata(data) {
+      return data.keys().hasAll(['scansToday', 'recipesToday', 'lastDateStr']) &&
+             data.scansToday is number &&
+             data.recipesToday is number &&
+             (data.get('ingestsToday', 0) is number) &&
+             data.lastDateStr is string && data.lastDateStr.size() <= 20;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
     match /users/{userId}/inventory/{itemId} {
       allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
       allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidInventoryItem(incoming());
@@ -104,6 +116,12 @@ service cloud.firestore {
                        incoming().userId == existing().userId &&
                        incoming().createdAt == existing().createdAt &&
                        (!incoming().keys().hasAny(['userId', 'createdAt']) || (incoming().userId == existing().userId && incoming().createdAt == existing().createdAt));
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/metadata/{itemId} {
+      allow read: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidMetadata(incoming());
       allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
     }
   }

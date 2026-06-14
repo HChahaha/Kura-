@@ -36,6 +36,19 @@
         "updatedAt": { "type": "string", "format": "timestamp" }
       },
       "required": ["userId", "name", "category", "checked", "createdAt"]
+    },
+    "DailyLimits": {
+      "title": "DailyLimits",
+      "description": "Daily rate limits for the user",
+      "type": "object",
+      "properties": {
+        "scansToday": { "type": "number" },
+        "recipesToday": { "type": "number" },
+        "ingestsToday": { "type": "number" },
+        "lastDateStr": { "type": "string", "maxLength": 20 },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["scansToday", "recipesToday", "lastDateStr"]
     }
   },
   "firestore": {
@@ -46,6 +59,10 @@
     "users/{userId}/shopping/{itemId}": {
       "schema": { "$ref": "#/entities/ShoppingItem" },
       "description": "Shopping items for a user"
+    },
+    "users/{userId}/metadata/{docId}": {
+      "schema": { "$ref": "#/entities/DailyLimits" },
+      "description": "Metadata and daily limits for the user"
     }
   }
 }

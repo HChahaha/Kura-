@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown, Camera, Receipt, CheckSquare } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, ChevronUp, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown, Camera, Receipt, CheckSquare } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
 import { getNormalShelfLife, suggestCategory } from '../lib/imageUtils';
 
@@ -499,6 +499,8 @@ export default function ShoppingList({
   const [expandedPriceMatcherItem, setExpandedPriceMatcherItem] = useState<string | null>(null);
   const [priceMatcherSearch, setPriceMatcherSearch] = useState('');
   const [selectedSizeByItem, setSelectedSizeByItem] = useState<Record<string, string>>({});
+  const [isPriceHistoryOpen, setIsPriceHistoryOpen] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const activeToBuy = React.useMemo(() => {
     return Array.from(new Set(shoppingList.filter(item => !item.checked).map(item => item.name.trim())));
@@ -839,12 +841,23 @@ export default function ShoppingList({
     record.category.toLowerCase().includes(searchHistoryQuery.toLowerCase())
   );
 
+  const sortedHistory = React.useMemo(() => {
+    return [...filteredHistory].sort((a, b) => {
+      const timeA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
+      const timeB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
+      if (isNaN(timeA) || isNaN(timeB)) {
+        return (b.purchaseDate || '').localeCompare(a.purchaseDate || '');
+      }
+      return timeB - timeA;
+    });
+  }, [filteredHistory]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="pb-32 px-6 pt-24 max-w-2xl mx-auto font-sans"
+      className="pb-32 px-6 pt-24 max-w-lg mx-auto font-sans"
     >
       <header className="mb-12">
         <h2 className="text-4xl font-light mb-2 text-ink-black">To Buy & References</h2>
@@ -853,236 +866,43 @@ export default function ShoppingList({
         </p>
       </header>
 
-      {/* Weekly Flyer Deals */}
-      <section id="tour-flyer-deals" className="mb-8 p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] shadow-sm animate-in fade-in">
-        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-red-500 mb-1 flex items-center gap-2">
-          <Tag className="w-4 h-4" />
-          Vancouver Store Price Matcher
-        </h3>
-        <p className="text-xs text-zinc-400 mb-4">
-          Select an active item or popular essential, or type below to instantly search flyer deals.
-        </p>
+      {/* Personal History Reference */}
+      <section id="tour-history-benchmarks" className="mb-6 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[18px] shadow-sm animate-in fade-in">
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#1a1a1a] dark:text-zinc-200 flex items-center gap-2">
+            <Crown className="w-4 h-4 text-indigo-500 animate-pulse" />
+            Personal Price Matcher
+          </h3>
+          <button
+            type="button"
+            onClick={() => setIsPriceHistoryOpen(true)}
+            className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer border border-indigo-100 dark:border-indigo-900/40"
+          >
+            Price History 🕒
+          </button>
+        </div>
 
         {/* Dynamic Inner Search Bar */}
-        <div className="relative mb-5">
+        <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
             <Search className="w-4 h-4" />
           </div>
           <input
             type="text"
-            placeholder="Type to search custom item (e.g. Salmon, Tofu)..."
+            placeholder="Search past item prices (e.g. Banana, Milk)..."
             value={priceMatcherSearch}
+            onClick={() => setIsPriceHistoryOpen(true)}
             onChange={(e) => {
               setPriceMatcherSearch(e.target.value);
-              // Auto-expand if the query is typed
+              setIsPriceHistoryOpen(true);
               if (e.target.value.trim().length > 1) {
                 setExpandedPriceMatcherItem(e.target.value.trim());
               } else {
                 setExpandedPriceMatcherItem(null);
               }
             }}
-            className="w-full pl-10 pr-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 rounded-[12px] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-red-500/20 focus:border-red-500 transition-all text-ink-black dark:text-zinc-200 placeholder:text-zinc-450"
+            className="w-full pl-10 pr-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 rounded-[12px] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-ink-black dark:text-zinc-200 placeholder:text-zinc-450 cursor-pointer"
           />
-        </div>
-
-        {/* Accordion List Container */}
-        <div className="space-y-3">
-          {/* Group 1: Active To-Buy Items */}
-          {itemsToDisplay.toBuy.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-red-500/80 mb-1 pl-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                {priceMatcherSearch.trim() ? 'Search Results' : 'Active To-Buy List Items'}
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                {itemsToDisplay.toBuy.map((itemName) => {
-                  const isExpanded = expandedPriceMatcherItem?.toLowerCase() === itemName.toLowerCase();
-                  const lowestPast = getLowestHistoricalPrice(itemName);
-                  const isActiveToBuyItem = activeToBuy.some(n => n.toLowerCase() === itemName.toLowerCase());
-                  
-                  // Helper to parse available flyer sizes for dynamic tiering
-                  const getAvailableSizes = (itName: string): string[] => {
-                    const normItem = itName.toLowerCase();
-                    const dbMatches = VANCOUVER_FLYER_DATABASE.filter(item => 
-                      item.name.toLowerCase().includes(normItem) ||
-                      normItem.includes(item.name.toLowerCase())
-                    );
-                    const sizes = Array.from(new Set(dbMatches.map(m => m.raw_unit_text).filter(Boolean)));
-                    if (sizes.length === 0) {
-                      return [parseSizeOrTier(itName) === 'per-lb' ? 'lb' : ''];
-                    }
-                    return sizes;
-                  };
-
-                  const availableSizes = getAvailableSizes(itemName);
-                  const currentSize = selectedSizeByItem[itemName] || (() => {
-                    if (lowestPast) {
-                      const pastTier = parseSizeOrTier(lowestPast.name, lowestPast.price, lowestPast.quantityBought);
-                      const bestMatch = availableSizes.find(s => parseSizeOrTier(itemName, undefined, s) === pastTier);
-                      if (bestMatch) return bestMatch;
-                    }
-                    return availableSizes[0];
-                  })();
-
-                  const deals = getVancouverStoreDeals(itemName, undefined, currentSize);
-
-                  return (
-                    <div 
-                      key={itemName} 
-                      className={`border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-red-200 dark:border-red-950/50 shadow-md bg-zinc-50/50 dark:bg-zinc-900/30' : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900'}`}
-                    >
-                      {/* Accordion Row Header */}
-                      <button
-                        type="button"
-                        onClick={() => setExpandedPriceMatcherItem(isExpanded ? null : itemName)}
-                        className="w-full flex items-center justify-between p-3.5 text-left focus:outline-none"
-                      >
-                        <div className="flex items-center gap-3 min-w-0 mr-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isExpanded ? 'bg-red-50 dark:bg-red-950/20 text-red-500' : 'bg-zinc-50 dark:bg-zinc-850 text-zinc-500'}`}>
-                            {getCategoryIcon(deals[0]?.category || suggestCategory(itemName) || 'Pantry')}
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="font-semibold text-sm text-ink-black dark:text-zinc-200 truncate pr-1">
-                              {itemName}
-                            </h4>
-                            <p className="text-[10px] text-zinc-400 font-medium">
-                              {isActiveToBuyItem ? 'Active shopping item' : 'Matching flyer essential'} • Expand deals
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {deals.length > 0 && (
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/35 px-2 py-0.5 rounded-full shrink-0">
-                              From {formatPriceForDisplay(deals[0].price)}{deals[0].raw_unit_text ? ` / ${deals[0].raw_unit_text}` : ''}
-                            </span>
-                          )}
-                          <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-red-500' : ''}`} />
-                        </div>
-                      </button>
-
-                      {/* Accordion Detail View */}
-                      {isExpanded && (
-                        <div className="p-4 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/15 dark:bg-zinc-900/20 space-y-3.5 animate-in slide-in-from-top-1 duration-200">
-                          {/* Historical Best Price comparison */}
-                          {lowestPast ? (
-                            <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/20 rounded-xl border border-indigo-100/40 dark:border-indigo-900/30 text-xs text-indigo-900 dark:text-indigo-200 flex items-start gap-2.5 shadow-sm">
-                              <span className="shrink-0 text-sm leading-none mt-0.5">💡</span>
-                              <div>
-                                <span className="font-medium text-indigo-850 dark:text-indigo-305">Your Personal Lowest Past Price:</span>{' '}
-                                <strong className="font-bold text-indigo-950 dark:text-indigo-100">{formatPrice(lowestPast.price)}</strong> at <span className="font-medium">{lowestPast.storeName}</span>
-                                {lowestPast.quantityBought && (
-                                  <span className="ml-1.5 px-1.5 py-0.5 text-[9px] bg-indigo-150/50 dark:bg-indigo-900/50 text-indigo-750 dark:text-indigo-300 font-bold rounded">
-                                    Size Unit: {lowestPast.quantityBought}
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-indigo-500/90 dark:text-indigo-400 block mt-0.5 font-medium">
-                                  Benchmark from purchase on {new Date(lowestPast.purchaseDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="p-3 bg-zinc-105/50 dark:bg-zinc-850/40 rounded-xl border border-zinc-200/40 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-2 shadow-sm">
-                              <span className="shrink-0 text-sm leading-none">💡</span>
-                              <span>No personal purchase history recorded yet. Add to list and buy to track personal benchmarks!</span>
-                            </div>
-                          )}
-
-                          {/* Dynamic Size Variant Switcher Selector Tabs */}
-                          {availableSizes.length > 1 && (
-                            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-zinc-100/60 dark:bg-zinc-800/60 rounded-xl w-fit">
-                              <span className="text-[9px] font-bold uppercase text-zinc-450 dark:text-zinc-500 px-2 tracking-wider">Sizes available:</span>
-                              {availableSizes.map(sz => {
-                                const isSelected = currentSize === sz;
-                                return (
-                                  <button
-                                    key={sz}
-                                    type="button"
-                                    onClick={() => setSelectedSizeByItem(prev => ({ ...prev, [itemName]: sz }))}
-                                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-transform duration-200 hover:scale-[1.03] ${
-                                      isSelected
-                                        ? 'bg-red-500 text-white shadow-xs'
-                                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/50 dark:hover:bg-zinc-750'
-                                    }`}
-                                  >
-                                    {sz}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Live Flyer Deals comparison */}
-                          <div className="space-y-2">
-                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-405 pl-1 mb-1.5">
-                              {currentSize ? `Vancouver Flyer Prices for ${currentSize} (sorted low to high)` : 'Vancouver Flyer Prices (sorted low to high)'}
-                            </div>
-                            {deals.map((deal, idx) => {
-                              const isCheapest = idx === 0;
-                              const isAdded = addedDeals.includes(deal.id);
-                              const displayStore = deal.storeName === 'Real Canadian Superstore' ? 'Superstore' : deal.storeName;
-
-                              return (
-                                <div 
-                                  key={deal.id} 
-                                  className={`flex items-center justify-between p-3 rounded-xl border ${
-                                    isCheapest 
-                                      ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-250 dark:border-emerald-900/50' 
-                                      : 'bg-white dark:bg-zinc-850/40 border-zinc-150 dark:border-zinc-800'
-                                  } transition-all`}
-                                >
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1 mr-3">
-                                    <span className={`text-xs font-sans truncate shrink-0 ${isCheapest ? 'text-emerald-900 dark:text-emerald-300 font-bold' : 'text-zinc-750 dark:text-zinc-300'}`}>
-                                      {displayStore} ── {deal.brand ? `[${deal.brand}] ` : ''}{deal.name} ({deal.pack_multiplier} {deal.base_unit}) ── ${deal.price.toFixed(2)} (${deal.normalized_unit_price < 0.01 ? deal.normalized_unit_price.toFixed(4) : deal.normalized_unit_price.toFixed(2)} / 1{deal.base_unit}) {isCheapest && '🟢'}
-                                    </span>
-                                    {isCheapest && (
-                                      <span className="text-[9px] font-extrabold uppercase tracking-widest bg-emerald-100 dark:bg-emerald-900/40 text-emerald-750 dark:text-emerald-300 px-1.5 py-0.5 rounded-[4px] shrink-0">
-                                        Best Price
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleAddVancouverDeal(deal); }}
-                                    disabled={isAdded}
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all border shrink-0 ${
-                                      isAdded 
-                                        ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400 border-green-200' 
-                                        : 'bg-white dark:bg-zinc-800 text-zinc-650 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-95 shadow-sm'
-                                    }`}
-                                    title={isAdded ? "Added to shopping list" : "Instant Add"}
-                                  >
-                                    {isAdded ? (
-                                      <CheckSquare className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <Plus className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Fallback empty view when no matches are found */}
-          {itemsToDisplay.toBuy.length === 0 && (
-            <div className="p-8 text-center bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 animate-in fade-in">
-              <Search className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-2" />
-              <p className="text-zinc-500 text-xs font-semibold">
-                No matching product found for "{priceMatcherSearch}"
-              </p>
-              <p className="text-zinc-400 text-[10px] mt-1">
-                Try searching a different item name like milk, cabbage, eggs, or spinach.
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
@@ -1267,7 +1087,7 @@ export default function ShoppingList({
                     {store} <span className="text-zinc-400 font-medium tracking-normal ml-1 border pl-2 bg-white rounded-md px-1">{items.length}</span>
                   </h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3.5">
                   {items.map((item) => (
                     <div 
                       key={item.id} 
@@ -1344,7 +1164,17 @@ export default function ShoppingList({
                             </button>
                             <div className="flex-1 cursor-text flex items-start justify-between" onClick={() => startEditingItem(item)}>
                               <div className="min-w-0 pr-2">
-                                <span className="font-semibold text-ink-black text-sm block mb-1 truncate">{item.name}</span>
+                                <span className="font-semibold text-ink-black text-sm block mb-0.5 truncate">{item.name}</span>
+                                {(() => {
+                                  const lowestPast = getLowestHistoricalPrice(item.name);
+                                  if (!lowestPast) return null;
+                                  return (
+                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mb-1.5 flex items-center gap-1">
+                                      <span>💡</span>
+                                      <span>Best past price: {formatPrice(lowestPast.price)}{lowestPast.quantityBought ? `/${lowestPast.quantityBought}` : ''} at {lowestPast.storeName}</span>
+                                    </p>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5 w-fit">
                                     {getCategoryIcon(item.category)}
@@ -1605,7 +1435,7 @@ export default function ShoppingList({
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               className="relative w-full max-w-md bg-white rounded-[24px] shadow-2xl overflow-hidden border border-zinc-100"
             >
-              <div className="p-6 md:p-8 space-y-6">
+              <div className="p-6 space-y-6">
                 <header>
                   <h3 className="text-[17px] font-light text-ink-black mb-1">Edit Purchase Log</h3>
                   <input 
@@ -1770,7 +1600,7 @@ export default function ShoppingList({
 
       {/* Part 3: Historical References Database */}
       <section className="mt-16 border-t border-zinc-100 pt-12">
-        <header className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <header className="mb-6 flex flex-col gap-4">
           <div>
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1">REFERENCE INDEX</h3>
             <h2 className="text-xl font-light text-ink-black flex items-center gap-3">
@@ -1784,7 +1614,7 @@ export default function ShoppingList({
               </button>
             </h2>
           </div>
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
             <input 
               type="text"
@@ -1796,7 +1626,7 @@ export default function ShoppingList({
           </div>
         </header>
 
-        {filteredHistory.length === 0 ? (
+        {sortedHistory.length === 0 ? (
           <div className="py-12 text-center bg-zinc-50 border border-dashed border-zinc-100 rounded-[16px]">
             <p className="text-[11px] text-zinc-400 font-medium italic">
               {searchHistoryQuery ? 'No matching references found.' : "You haven't purchased anything yet. Log items to build a price index!"}
@@ -1804,7 +1634,7 @@ export default function ShoppingList({
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredHistory.map(record => (
+            {(showAllHistory ? sortedHistory : sortedHistory.slice(0, 5)).map(record => (
               <div 
                 key={record.id} 
                 className="bg-white border border-zinc-100 rounded-[16px] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:shadow-sm hover:border-zinc-200 transition-all group"
@@ -1859,9 +1689,189 @@ export default function ShoppingList({
                 </div>
               </div>
             ))}
+            
+            {sortedHistory.length > 5 && (
+              <div className="flex justify-center mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAllHistory(!showAllHistory)}
+                  className="px-4 py-2 bg-zinc-50 hover:bg-zinc-105 border border-zinc-200 text-ink-black text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer dark:bg-zinc-900 dark:border-zinc-800 dark:hover:bg-zinc-850 dark:text-zinc-200"
+                >
+                  {showAllHistory ? (
+                    <>
+                      <span>Show Less</span>
+                      <ChevronUp className="w-4 h-4 text-zinc-500" />
+                    </>
+                  ) : (
+                    <>
+                      <span>View All ({sortedHistory.length} items)</span>
+                      <ChevronDown className="w-4 h-4 text-zinc-500" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
+
+      {/* Sleek Price History popup sheet modal */}
+      <AnimatePresence>
+        {isPriceHistoryOpen && (
+          <div className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-white dark:bg-zinc-905 w-full max-w-lg rounded-t-[28px] sm:rounded-[24px] overflow-hidden shadow-2xl flex flex-col h-[85vh] sm:h-[80vh]"
+            >
+              <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-950/25">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm font-bold uppercase tracking-wider text-ink-black dark:text-zinc-200">
+                    Price History & Benchmarks
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setIsPriceHistoryOpen(false)}
+                  className="p-1.5 text-zinc-400 hover:text-ink-black dark:hover:text-zinc-200 transition-colors shrink-0"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              {/* Modal Search Bar */}
+              <div className="px-5 pt-4 pb-2 bg-white dark:bg-zinc-900 border-b border-zinc-50 dark:border-zinc-850">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search past item prices (e.g. Banana, Milk)..."
+                    value={priceMatcherSearch}
+                    onChange={(e) => {
+                      setPriceMatcherSearch(e.target.value);
+                      if (e.target.value.trim().length > 1) {
+                        setExpandedPriceMatcherItem(e.target.value.trim());
+                      } else {
+                        setExpandedPriceMatcherItem(null);
+                      }
+                    }}
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800/80 rounded-[12px] text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-ink-black dark:text-zinc-200 placeholder:text-zinc-450"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Accordion Content */}
+              <div className="p-5 overflow-y-auto space-y-3 flex-1 pb-16 no-scrollbar bg-white dark:bg-zinc-900">
+                {itemsToDisplay.toBuy.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-2 pl-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      {priceMatcherSearch.trim() ? 'Search Results' : 'Active To-Buy List Items'}
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {itemsToDisplay.toBuy.map((itemName) => {
+                        const isExpanded = expandedPriceMatcherItem?.toLowerCase() === itemName.toLowerCase();
+                        const lowestPast = getLowestHistoricalPrice(itemName);
+                        const isActiveToBuyItem = activeToBuy.some(n => n.toLowerCase() === itemName.toLowerCase());
+                        
+                        return (
+                          <div 
+                            key={itemName} 
+                            className={`border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-indigo-200 dark:border-indigo-950/50 shadow-md bg-zinc-50/50 dark:bg-zinc-900/30' : 'border-zinc-150 dark:border-zinc-800 bg-white dark:bg-zinc-900'}`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPriceMatcherItem(isExpanded ? null : itemName)}
+                              className="w-full flex items-center justify-between p-3.5 text-left focus:outline-none"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 mr-2 flex-1">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isExpanded ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500' : 'bg-zinc-50 dark:bg-zinc-850 text-zinc-500'}`}>
+                                  {getCategoryIcon(lowestPast?.category || suggestCategory(itemName) || 'Pantry')}
+                                </div>
+                                <div className="min-w-0 text-left">
+                                  <h4 className="font-semibold text-xs text-ink-black dark:text-zinc-200 truncate pr-1">
+                                    {itemName}
+                                  </h4>
+                                  <p className="text-[9px] text-zinc-400 font-medium whitespace-nowrap">
+                                    {isActiveToBuyItem ? 'Active to-buy item' : 'Purchase history item'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {lowestPast && (
+                                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/35 px-2 py-0.5 rounded-full shrink-0">
+                                    Best: {formatPrice(lowestPast.price)}{lowestPast.quantityBought ? `/${lowestPast.quantityBought}` : ''}
+                                  </span>
+                                )}
+                                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-500' : ''}`} />
+                              </div>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="p-4 border-t border-zinc-100 dark:border-zinc-850 bg-zinc-50/15 dark:bg-zinc-900/20 space-y-3 animate-in slide-in-from-top-1 duration-200">
+                                {lowestPast ? (
+                                  <div className="p-4 bg-indigo-50/45 dark:bg-indigo-950/15 rounded-xl border border-indigo-100/30 dark:border-indigo-900/40 text-xs text-indigo-950 dark:text-indigo-200 flex items-start gap-3 shadow-sm">
+                                    <span className="shrink-0 text-lg leading-none">🎖️</span>
+                                    <div className="space-y-1.5 flex-1">
+                                      <p className="font-semibold text-indigo-950 dark:text-indigo-100 text-xs">
+                                        Your Personal Lowest Past Price
+                                      </p>
+                                      <div className="flex items-baseline gap-2 flex-wrap">
+                                        <span className="text-xl font-black text-indigo-750 dark:text-indigo-200">
+                                          {formatPrice(lowestPast.price)}
+                                        </span>
+                                        {lowestPast.quantityBought && (
+                                          <span className="text-[11px] font-bold text-zinc-550 dark:text-zinc-405">
+                                            per {lowestPast.quantityBought}
+                                          </span>
+                                        )}
+                                        <span className="text-xs text-zinc-405 dark:text-zinc-500 font-medium font-sans">
+                                          at
+                                        </span>
+                                        <span className="text-xs font-bold text-indigo-850 dark:text-indigo-350 bg-indigo-100/30 px-2 py-0.5 rounded-lg border border-indigo-150/10">
+                                          {lowestPast.storeName}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-zinc-500 dark:text-zinc-500 font-medium pt-1 border-t border-indigo-100/20 flex justify-between items-center bg-transparent">
+                                        <span>Recorded purchase date</span>
+                                        <span className="font-bold">
+                                          {new Date(lowestPast.purchaseDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-3.5 bg-zinc-50 dark:bg-zinc-850 border border-zinc-150 dark:border-zinc-800 rounded-xl text-xs text-zinc-450 dark:text-zinc-400 flex items-start gap-2 shadow-sm">
+                                    <span className="shrink-0 text-sm leading-none">💡</span>
+                                    <span>No personal purchase history recorded yet for "{itemName}". Add to list and check off items or log purchases to track your personal benchmarks!</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 animate-in fade-in">
+                    <Search className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-2" />
+                    <p className="text-zinc-500 text-xs font-semibold">
+                      No matching product found for "{priceMatcherSearch}"
+                    </p>
+                    <p className="text-zinc-400 text-[10px] mt-1">
+                      Try searching a different item name like milk, cabbage, eggs, or spinach.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

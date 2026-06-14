@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { LogIn } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import KuraLogo from '../components/KuraLogo';
 
 export default function Auth() {
   const handleGoogleSignIn = async () => {
@@ -21,8 +22,8 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full text-center"
       >
-        <div className="w-24 h-24 bg-[#E0EEE0] rounded-[32px] flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">
-          🌸
+        <div className="w-24 h-24 bg-zinc-900 rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-lg p-5">
+          <KuraLogo className="w-full h-full text-white" strokeWidth={3} strokeColor="#ffffff" />
         </div>
         <h1 className="text-3xl font-bold text-ink-black mb-2 tracking-tight">Kura</h1>
         <p className="text-sm text-zinc-400 font-medium mb-12 max-w-[240px] mx-auto leading-relaxed">

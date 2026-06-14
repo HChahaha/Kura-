@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Clock, Users, Flame, Dumbbell, CheckCircle2, Heart, X, Play, Sparkles, ShoppingBag, AlertTriangle } from 'lucide-react';
 import { RECIPES } from '../constants';
 import { View, InventoryItem, Recipe } from '../types';
+import KuraLogo from '../components/KuraLogo';
 import { getRecipeById, calculateMatchScore } from '../services/recipeService';
 import { db, auth } from '../lib/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -18,6 +19,8 @@ interface RecipeDetailProps {
   savedRecipeIds?: string[];
   onToggleSaveRecipe?: (id: string) => void;
   onEditRecipe?: (id: string) => void;
+  tempRecipe?: any;
+  onSaveTempRecipe?: (recipe: any) => void;
 }
 
 // Subtraction helper to deduct recipe quantities safely
@@ -53,9 +56,12 @@ export default function RecipeDetail({
   customRecipes,
   savedRecipeIds = [],
   onToggleSaveRecipe,
-  onEditRecipe
+  onEditRecipe,
+  tempRecipe,
+  onSaveTempRecipe
 }: RecipeDetailProps) {
   const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
+  const [individualAdded, setIndividualAdded] = useState<Record<string, boolean>>({});
   const [cookingMode, setCookingMode] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -67,6 +73,8 @@ export default function RecipeDetail({
   
   // Find recipe
   const recipe = useMemo(() => {
+    if (id === 'temp-ai-suggestion') return tempRecipe;
+
     const customFound = customRecipes.find(r => r.id === id);
     if (customFound) return customFound;
 
@@ -84,17 +92,42 @@ export default function RecipeDetail({
     }
     
     return null; 
-  }, [id, inventory, customRecipes]);
+  }, [id, inventory, customRecipes, tempRecipe]);
+
+  const [editedName, setEditedName] = useState('');
+  const [editedIngredients, setEditedIngredients] = useState<{ name: string; quantity: string }[]>([]);
+  const [editedInstructions, setEditedInstructions] = useState<string[]>([]);
+
+  // Sync edits when tempRecipe changes
+  React.useEffect(() => {
+    if (recipe && recipe.isTempSuggestion) {
+      setEditedName(recipe.name || '');
+      setEditedIngredients((recipe.fullIngredients || []).map((ing: any) => ({ name: ing.name || '', quantity: ing.quantity || '' })));
+      setEditedInstructions(recipe.instructions || recipe.steps || []);
+    }
+  }, [recipe]);
+
+  const activeRecipe = useMemo(() => {
+    if (recipe && recipe.isTempSuggestion) {
+      return {
+        ...recipe,
+        name: editedName,
+        fullIngredients: editedIngredients,
+        instructions: editedInstructions
+      };
+    }
+    return recipe;
+  }, [recipe, editedName, editedIngredients, editedInstructions]);
 
   const isSaved = useMemo(() => {
-    if (!recipe) return false;
-    return savedRecipeIds.includes(recipe.id);
-  }, [recipe, savedRecipeIds]);
+    if (!activeRecipe) return false;
+    return savedRecipeIds.includes(activeRecipe.id);
+  }, [activeRecipe, savedRecipeIds]);
 
   // Calculate ingredient statuses based on real inventory
   const processedIngredients = useMemo(() => {
-    if (!recipe) return [];
-    return recipe.fullIngredients?.map(ing => {
+    if (!activeRecipe) return [];
+    return activeRecipe.fullIngredients?.map(ing => {
       const inventoryMatch = inventory.find(item => 
         item.name.toLowerCase().includes(ing.name.toLowerCase()) || 
         ing.name.toLowerCase().includes(item.name.toLowerCase())
@@ -107,7 +140,7 @@ export default function RecipeDetail({
       
       return { ...ing, inStock: status, inventoryMatch };
     }) || [];
-  }, [recipe, inventory]);
+  }, [activeRecipe, inventory]);
 
   // Compute exact pantry matches for deduction modal
   const matchingInventoryItems = useMemo(() => {
@@ -123,17 +156,17 @@ export default function RecipeDetail({
     return matches;
   }, [processedIngredients]);
 
-  const baseServings = parseInt(recipe?.servings || '1') || 1;
+  const baseServings = parseInt(activeRecipe?.servings || '1') || 1;
   const [servings, setServings] = useState(1);
 
   // Sync servings with recipe when recipe is loaded
   React.useEffect(() => {
-    if (recipe) {
-      setServings(parseInt(recipe.servings || '1') || 1);
+    if (activeRecipe) {
+      setServings(parseInt(activeRecipe.servings || '1') || 1);
     }
-  }, [recipe]);
+  }, [activeRecipe]);
 
-  if (!recipe) {
+  if (!activeRecipe) {
      return (
        <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-white">
           <p className="text-zinc-400 mb-8 font-light italic">Looking for recipe details in the scrapbook...</p>
@@ -239,9 +272,9 @@ export default function RecipeDetail({
   };
 
   if (cookingMode) {
-    const totalSteps = recipe.instructions?.length || 0;
+    const totalSteps = activeRecipe.instructions?.length || 0;
     const progress = ((currentStep + 1) / totalSteps) * 100;
-    const stepText = recipe.instructions?.[currentStep] || '';
+    const stepText = activeRecipe.instructions?.[currentStep] || '';
     const [title, ...descParts] = stepText.includes(':') ? stepText.split(':') : [`Step ${currentStep + 1}`, stepText];
     const description = descParts.join(':').trim();
 
@@ -256,7 +289,7 @@ export default function RecipeDetail({
             <X className="w-6 h-6" />
           </button>
           <div className="text-center font-sans">
-            <h2 className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400">Cooking {recipe.name}</h2>
+            <h2 className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-400">Cooking {activeRecipe.name}</h2>
             <p className="text-xs font-bold text-ink-black">Step {currentStep + 1} of {totalSteps}</p>
           </div>
           <div className="w-6" />
@@ -328,29 +361,32 @@ export default function RecipeDetail({
         <button onClick={() => onViewChange('recipes')} className="text-ink-black hover:opacity-75 transition-opacity">
           <ArrowLeft className="w-5 h-5 black" />
         </button>
-        <h1 className="text-lg font-light tracking-[0.4em] uppercase text-ink-black select-none">Kura</h1>
+        <div className="flex items-center gap-1.5 select-none text-ink-black">
+          <KuraLogo className="w-5 h-5" strokeWidth={3} />
+          <span className="text-sm font-bold tracking-[0.3em] uppercase">KURA</span>
+        </div>
         <div className="flex items-center gap-4">
-          {recipe.fullIngredients && (
+          {activeRecipe.fullIngredients && (
             <div className="flex flex-col items-end justify-center">
                <span className="text-[8px] font-bold text-ink-black/40 uppercase tracking-widest">Inventory Match</span>
                <span className="text-xs font-bold text-bamboo-green">
-                 {Math.round((recipe.matchScore || 0) / 100 * recipe.fullIngredients.length)}/{recipe.fullIngredients.length} Items Match
+                 {Math.round((activeRecipe.matchScore || 0) / 100 * activeRecipe.fullIngredients.length)}/{activeRecipe.fullIngredients.length} Items Match
                </span>
             </div>
           )}
           
-          {recipe.isUserCreated && onEditRecipe && (
+          {activeRecipe.isUserCreated && onEditRecipe && (
             <button 
-              onClick={() => onEditRecipe(recipe.id)}
+              onClick={() => onEditRecipe(activeRecipe.id)}
               className="w-16 h-8 rounded-full flex items-center justify-center bg-white/40 hover:bg-white border border-zinc-100 shadow-sm text-zinc-400 hover:text-ink-black transition-all active:scale-95 text-[10px] uppercase font-bold tracking-widest cursor-pointer"
             >
               Edit
             </button>
           )}
 
-          {onToggleSaveRecipe && !recipe.isUserCreated && (
+          {onToggleSaveRecipe && !activeRecipe.isUserCreated && (
             <button 
-              onClick={() => onToggleSaveRecipe(recipe.id)}
+              onClick={() => onToggleSaveRecipe(activeRecipe.id)}
               className="w-8 h-8 rounded-full flex items-center justify-center bg-white/40 hover:bg-white border border-zinc-100 shadow-sm text-zinc-400 hover:text-red-500 transition-all active:scale-95 cursor-pointer"
               title={isSaved ? "Remove from saved recipes" : "Save recipe"}
             >
@@ -362,17 +398,47 @@ export default function RecipeDetail({
 
       <div className="relative min-h-[40vh] w-full pt-28 pb-10 bg-zinc-950 text-white px-8 flex flex-col justify-end">
         <div className="relative">
-          {recipe.isAiSuggested && (
+          {activeRecipe.isTempSuggestion && onSaveTempRecipe ? (
+            <div className="mb-4 p-4 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 flex justify-between items-center text-white" id="temp-ai-save-banner">
+              <div className="pr-3">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#38bdf8] block mb-0.5 animate-pulse">Gemini Smart Suggested</span>
+                <p className="text-xs font-semibold leading-tight text-zinc-100">Keep this recipe in Cookbook?</p>
+              </div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveTempRecipe(activeRecipe);
+                }}
+                className="px-4 py-2 bg-[#38bdf8] text-black hover:bg-sky-450 text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)] hover:scale-105 active:scale-95 cursor-pointer shrink-0 font-sans"
+              >
+                Save Recipe
+              </button>
+            </div>
+          ) : activeRecipe.isAiSuggested ? (
             <span className="inline-flex items-center gap-1 bg-indigo-600 text-white text-[9px] uppercase font-extrabold tracking-widest px-3 py-1 rounded-full mb-4 shadow border border-indigo-500">
               <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse animate-duration-1000" /> AI Spark Suggestion
             </span>
-          )}
+          ) : null}
           
-          <h2 className="text-4xl font-extrabold leading-tight mb-8">
-            {recipe.name}
-          </h2>
+          {activeRecipe.isTempSuggestion ? (
+            <div className="space-y-2 mt-2 mb-8" id="recipe-title-container">
+              <label className="text-[9px] font-black uppercase tracking-widest text-[#38bdf8] block">RECIPE TITLE</label>
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="w-full text-3xl font-extrabold pb-2 bg-transparent text-white border-b border-zinc-850 focus:outline-none focus:border-[#38bdf8] transition-colors"
+                placeholder="RECIPE TITLE"
+              />
+            </div>
+          ) : (
+            <h2 className="text-4xl font-extrabold leading-tight mb-8">
+              {activeRecipe.name}
+            </h2>
+          )}
+
           <div className="flex flex-wrap gap-y-4 gap-x-8 text-[11px] font-extrabold uppercase tracking-widest text-zinc-300">
-            <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-500" /> {recipe.time || '15 mins'}</div>
+            <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-500" /> {activeRecipe.time || '15 mins'}</div>
             <div className="flex items-center gap-2 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
               <Users className="w-4 h-4 text-zinc-500" /> 
               <button 
@@ -391,44 +457,117 @@ export default function RecipeDetail({
 
       <div className="px-6 py-12 -mt-4 bg-white rounded-t-[32px] relative z-10 shadow-2xl">
         <section className="mb-20">
-          <h2 className="text-3xl font-light mb-12 text-ink-black select-none">Ingredients</h2>
-          <div className="bg-zinc-50 border border-zinc-100/50 rounded-[24px] p-4">
-            {processedIngredients?.map((item, idx) => (
-              <div 
-                key={idx} 
-                onClick={() => toggleIngredient(idx)}
-                className={`flex items-center justify-between p-6 border-b border-zinc-100 last:border-0 cursor-pointer transition-all ${checkedIngredients[idx] ? 'opacity-40 font-light' : 'opacity-100 font-semibold'}`}
-              >
-                <div className="flex items-center gap-5 min-w-0 flex-1 text-black">
-                  <div className={`w-6 h-6 rounded-md border shrink-0 flex items-center justify-center transition-all ${
-                    checkedIngredients[idx] ? 'bg-ink-black border-ink-black' : 'border-zinc-350 bg-white'
-                  }`}>
-                    {checkedIngredients[idx] && <CheckCircle2 className="w-4 h-4 text-white animate-in zoom-in-50" />}
+          {activeRecipe.isTempSuggestion ? (
+            <div id="ingredients-list-wrapper" className="space-y-6">
+              <div className="flex justify-between items-center mb-8 border-b border-zinc-100 pb-3">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[#38bdf8] block mb-1">INGREDIENTS LIST</label>
+                  <h2 className="text-3xl font-light text-ink-black select-none">Ingredients List</h2>
+                </div>
+                <button
+                  onClick={() => setEditedIngredients(prev => [...prev, { name: '', quantity: '' }])}
+                  className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-ink-black text-[10px] font-bold uppercase tracking-wider rounded-xl transition-colors flex items-center gap-1 shrink-0"
+                >
+                  + Add Ingredient
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {editedIngredients.map((item, idx) => (
+                  <div key={idx} className="flex gap-4 items-center bg-zinc-50 border border-zinc-100 p-4 rounded-2xl">
+                    <span className="text-[10px] font-extrabold text-zinc-300 w-6 shrink-0">#{idx + 1}</span>
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditedIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, name: val } : ing));
+                      }}
+                      className="flex-1 text-sm font-semibold text-ink-black focus:outline-none bg-transparent border-b border-transparent focus:border-zinc-300 pb-1.5 transition-colors"
+                      placeholder="Ingredient name"
+                    />
+                    <input
+                      type="text"
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditedIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, quantity: val } : ing));
+                      }}
+                      className="w-28 text-xs text-zinc-500 focus:outline-none bg-transparent border-b border-transparent focus:border-zinc-300 pb-1.5 transition-colors"
+                      placeholder="Amount (e.g. 2 cups)"
+                    />
+                    <button
+                      onClick={() => {
+                        setEditedIngredients(prev => prev.filter((_, i) => i !== idx));
+                      }}
+                      className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    {item.quantity && (
-                      <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-black whitespace-nowrap shrink-0">
-                        {scaleQuantity(item.quantity)}
-                      </span>
-                    )}
-                    <span className={`text-base font-bold font-sans break-words ${checkedIngredients[idx] ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
-                      <span className={lastAddedIngredient && item.name.toLowerCase().includes(lastAddedIngredient.toLowerCase()) ? 'text-bamboo-green underline underline-offset-4 decoration-2' : ''}>
-                        {item.name}
-                      </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-3xl font-light mb-12 text-ink-black select-none">Ingredients</h2>
+              <div className="bg-zinc-50 border border-zinc-100/50 rounded-[24px] p-4">
+                {processedIngredients?.map((item, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => toggleIngredient(idx)}
+                    className={`flex items-center justify-between p-6 border-b border-zinc-100 last:border-0 cursor-pointer transition-all ${checkedIngredients[idx] ? 'opacity-40 font-light' : 'opacity-100 font-semibold'}`}
+                  >
+                    <div className="flex items-center gap-5 min-w-0 flex-1 text-black">
+                      <div className={`w-6 h-6 rounded-md border shrink-0 flex items-center justify-center transition-all ${
+                        checkedIngredients[idx] ? 'bg-ink-black border-ink-black' : 'border-zinc-350 bg-white'
+                      }`}>
+                        {checkedIngredients[idx] && <CheckCircle2 className="w-4 h-4 text-white animate-in zoom-in-50" />}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        {item.quantity && (
+                          <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-black whitespace-nowrap shrink-0">
+                            {scaleQuantity(item.quantity)}
+                          </span>
+                        )}
+                        <span className={`text-base font-bold font-sans break-words ${checkedIngredients[idx] ? 'text-zinc-400 line-through' : 'text-zinc-800'}`}>
+                          <span className={lastAddedIngredient && item.name.toLowerCase().includes(lastAddedIngredient.toLowerCase()) ? 'text-bamboo-green underline underline-offset-4 decoration-2' : ''}>
+                            {item.name}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    <span 
+                      onClick={(e) => {
+                        if (item.inStock === 'OUT OF STOCK') {
+                          e.stopPropagation(); // Stop toggling row checked state
+                          if (individualAdded[item.name]) return;
+                          onAddToShoppingList([item.name]);
+                          setIndividualAdded(prev => ({ ...prev, [item.name]: true }));
+                        }
+                      }}
+                      className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full whitespace-nowrap transition-all ${
+                        checkedIngredients[idx] ? 'text-zinc-400 bg-zinc-100' :
+                        item.inStock === 'IN STOCK' ? 'text-bamboo-green bg-[#E8F5E9]/50' : 
+                        item.inStock === 'LOW STOCK' ? 'text-orange-400 bg-[#FFF3E0]/50' : 
+                        individualAdded[item.name] ? 'text-green-600 bg-green-50 border border-green-200 animate-in zoom-in-75' :
+                        'text-red-500 bg-red-50 border border-red-200 hover:scale-105 active:scale-95 cursor-pointer shadow-sm'
+                      }`}
+                      title={item.inStock === 'OUT OF STOCK' && !individualAdded[item.name] ? "Click to add missing ingredient to To-Buy List" : undefined}
+                    >
+                      {checkedIngredients[idx] 
+                        ? 'CHECKED' 
+                        : item.inStock === 'OUT OF STOCK' 
+                          ? (individualAdded[item.name] ? 'ADDED ✓' : '+ Add to To-Buy List') 
+                          : item.inStock
+                      }
                     </span>
                   </div>
-                </div>
-                <span className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full ${
-                  checkedIngredients[idx] ? 'text-zinc-400 bg-zinc-100' :
-                  item.inStock === 'IN STOCK' ? 'text-bamboo-green bg-[#E8F5E9]/50' : 
-                  item.inStock === 'LOW STOCK' ? 'text-orange-400 bg-[#FFF3E0]/50' : 
-                  'text-zinc-300 bg-zinc-100'
-                }`}>
-                  {checkedIngredients[idx] ? 'CHECKED' : item.inStock}
-                </span>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+
           <div className="flex flex-col gap-3 mt-10">
             <button 
               onClick={addMissingToShopping}
@@ -440,40 +579,84 @@ export default function RecipeDetail({
         </section>
 
         <section className="mb-24 px-2">
-          <div className="flex items-center gap-6 mb-16">
-            <h2 className="text-3xl font-light text-ink-black select-none">Preparation</h2>
-            <div className="h-[1px] flex-1 bg-zinc-100" />
-            <button 
-              onClick={() => {
-                setCookingMode(true);
-                setCurrentStep(0);
-              }}
-              className="px-5 py-2.5 bg-ink-black/5 text-zinc-400 rounded-full text-[8px] font-bold uppercase tracking-widest hover:bg-ink-black hover:text-white transition-all font-sans cursor-pointer"
-            >
-              Step-By-Step Guide
-            </button>
-          </div>
-          <div className="space-y-16">
-            {recipe.instructions?.map((step, idx) => {
-              const [title, ...descParts] = step.includes(':') ? step.split(':') : [`Step ${idx + 1}`, step];
-              const description = descParts.join(':').trim();
-              return (
-                <div key={idx} className="flex gap-10 group">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="w-12 h-12 rounded-full border border-zinc-100 flex items-center justify-center shrink-0 text-xs font-extrabold text-zinc-300 bg-white transition-all group-hover:scale-110 group-hover:border-zinc-300 shadow-sm font-sans">
-                      {String(idx + 1).padStart(2, '0')}
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <h3 className="text-xl font-bold text-ink-black tracking-tight leading-tight">{title}</h3>
-                    <p className="text-base leading-relaxed text-zinc-500 font-light font-sans">
-                      {description}
-                    </p>
-                  </div>
+          {activeRecipe.isTempSuggestion ? (
+            <div id="cooking-steps-section" className="space-y-8">
+              <div className="flex justify-between items-center mb-10 border-b border-zinc-100 pb-3">
+                <div>
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[#38bdf8] block mb-1">COOKING STEPS</label>
+                  <h2 className="text-3xl font-light text-ink-black select-none">Cooking Steps</h2>
                 </div>
-              );
-            })}
-          </div>
+                <button
+                  onClick={() => setEditedInstructions(prev => [...prev, ''])}
+                  className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-ink-black text-xs font-bold uppercase tracking-wider rounded-xl transition-colors flex items-center gap-1 shrink-0"
+                >
+                  + Add Step
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {editedInstructions.map((step, idx) => (
+                  <div key={idx} className="flex gap-4 items-start bg-zinc-50 border border-zinc-105 p-4 rounded-2xl animate-in fade-inslide-in-from-bottom-2">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pt-1.5 w-16 shrink-0">Step {idx + 1}</span>
+                    <textarea
+                      value={step}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditedInstructions(prev => prev.map((s, i) => i === idx ? val : s));
+                      }}
+                      className="flex-1 text-sm font-normal font-sans text-zinc-700 bg-transparent focus:outline-none focus:border-b focus:border-ink-black pb-1 resize-none min-h-[65px]"
+                      placeholder="Describe instruction step..."
+                    />
+                    <button
+                      onClick={() => {
+                        setEditedInstructions(prev => prev.filter((_, i) => i !== idx));
+                      }}
+                      className="p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-6 mb-16">
+                <h2 className="text-3xl font-light text-ink-black select-none">Preparation</h2>
+                <div className="h-[1px] flex-1 bg-zinc-100" />
+                <button 
+                  onClick={() => {
+                    setCookingMode(true);
+                    setCurrentStep(0);
+                  }}
+                  className="px-5 py-2.5 bg-ink-black/5 text-zinc-400 rounded-full text-[8px] font-bold uppercase tracking-widest hover:bg-ink-black hover:text-white transition-all font-sans cursor-pointer"
+                >
+                  Step-By-Step Guide
+                </button>
+              </div>
+              <div className="space-y-16">
+                {activeRecipe.instructions?.map((step, idx) => {
+                  const [title, ...descParts] = step.includes(':') ? step.split(':') : [`Step ${idx + 1}`, step];
+                  const description = descParts.join(':').trim();
+                  return (
+                    <div key={idx} className="flex gap-10 group">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="w-12 h-12 rounded-full border border-zinc-100 flex items-center justify-center shrink-0 text-xs font-extrabold text-zinc-300 bg-white transition-all group-hover:scale-110 group-hover:border-zinc-300 shadow-sm font-sans">
+                          {String(idx + 1).padStart(2, '0')}
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <h3 className="text-xl font-bold text-ink-black tracking-tight leading-tight">{title}</h3>
+                        <p className="text-base leading-relaxed text-zinc-500 font-light font-sans">
+                          {description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </section>
 
         <div className="fixed bottom-28 left-6 right-6 z-40">
@@ -484,7 +667,7 @@ export default function RecipeDetail({
             <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
               <CheckCircle2 className="w-3.5 h-3.5 text-black" />
             </div>
-            FINISH COOKING
+            FINISH COOK 🍳
           </button>
         </div>
       </div>

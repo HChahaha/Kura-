@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Camera, CheckCircle2, Plus, X, Calendar as CalendarIcon, Upload, Loader2 } from 'lucide-react';
+import { Camera, CheckCircle2, Plus, X, Calendar as CalendarIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
 import { View } from '../types';
 import { FOOD_SHELF_LIFE } from '../constants';
 import { CustomCalendar } from '../components/CustomCalendar';
@@ -35,7 +35,8 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [editingItem, setEditingItem] = useState<DetectedItem | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [remainingScans, setRemainingScans] = useState<number>(3);
+  const [remainingScans, setRemainingScans] = useState<number>(2);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   // Load remaining scans on mount
   useEffect(() => {
@@ -66,6 +67,18 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         }
       } catch (err: any) {
         console.error("Camera access error:", err);
+        const errMsg = (err.message || "").toLowerCase();
+        const errName = (err.name || "").toLowerCase();
+        if (
+          errName === "notallowederror" || 
+          errName === "permissiondeniederror" || 
+          errName === "securityerror" ||
+          errMsg.includes("denied") || 
+          errMsg.includes("permission") ||
+          errMsg.includes("notallowed")
+        ) {
+          setShowPermissionModal(true);
+        }
         setError(err.message || "Unable to access camera. Use the upload button below.");
       }
     }
@@ -92,9 +105,27 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      await processImageFile(file);
+    try {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        await processImageFile(file);
+      }
+    } catch (err: any) {
+      console.error("File upload error caught in handler:", err);
+      const errMsg = (err.message || "").toLowerCase();
+      const errName = (err.name || "").toLowerCase();
+      if (
+        errName === "notallowederror" || 
+        errName === "permissiondeniederror" || 
+        errName === "securityerror" ||
+        errMsg.includes("denied") || 
+        errMsg.includes("permission") ||
+        errMsg.includes("notallowed")
+      ) {
+        setShowPermissionModal(true);
+      } else {
+        setScanError(err.message || "Failed to upload file");
+      }
     }
   };
 
@@ -107,7 +138,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const userId = auth.currentUser?.uid || '';
       const remaining = await getRemainingScans(userId);
       if (remaining <= 0) {
-        throw new Error("You have reached your daily limit of 3 receipt scans.");
+        throw new Error("You have reached your daily limit of 2 receipt scans.");
       }
 
       const reader = new FileReader();
@@ -159,6 +190,18 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       }
     } catch (err: any) {
       console.error(err);
+      const errMsg = (err.message || "").toLowerCase();
+      const errName = (err.name || "").toLowerCase();
+      if (
+        errName === "notallowederror" || 
+        errName === "permissiondeniederror" || 
+        errName === "securityerror" ||
+        errMsg.includes("denied") || 
+        errMsg.includes("permission") ||
+        errMsg.includes("notallowed")
+      ) {
+        setShowPermissionModal(true);
+      }
       setScanError(err.message || "Unable to read receipt");
     } finally {
       setIsScanning(false);
@@ -175,7 +218,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const userId = auth.currentUser?.uid || '';
       const remaining = await getRemainingScans(userId);
       if (remaining <= 0) {
-        throw new Error("You have reached your daily limit of 3 receipt scans.");
+        throw new Error("You have reached your daily limit of 2 receipt scans.");
       }
 
       // Draw video frame to temporary canvas
@@ -231,6 +274,18 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       }
     } catch (err: any) {
       console.error(err);
+      const errMsg = (err.message || "").toLowerCase();
+      const errName = (err.name || "").toLowerCase();
+      if (
+        errName === "notallowederror" || 
+        errName === "permissiondeniederror" || 
+        errName === "securityerror" ||
+        errMsg.includes("denied") || 
+        errMsg.includes("permission") ||
+        errMsg.includes("notallowed")
+      ) {
+        setShowPermissionModal(true);
+      }
       setScanError(err.message || "Failed to capture receipt");
     } finally {
       setIsScanning(false);
@@ -259,12 +314,19 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               <Camera className="w-12 h-12 text-white/20 mx-auto" />
               <p className="text-white/40 text-sm font-medium">{error || 'Initializing camera stream...'}</p>
               <button 
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  try {
+                    fileInputRef.current?.click();
+                  } catch (err: any) {
+                    console.error("Camera fallback upload click failed:", err);
+                    setShowPermissionModal(true);
+                  }
+                }}
                 disabled={remainingScans <= 0 || isScanning}
                 className="mx-auto flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 transition-all text-xs uppercase tracking-widest font-bold disabled:opacity-40"
               >
                 <Upload className="w-4 h-4" />
-                Upload Receipt
+                {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : 'UPLOAD RECEIPT'}
               </button>
               <input 
                 type="file" 
@@ -274,7 +336,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
                 accept="image/*"
               />
               <p className="text-white/30 text-[10px] uppercase font-bold tracking-widest block pt-2">
-                Remaining scans: {remainingScans} today
+                REMAINING SCANS: {remainingScans} TODAY
               </p>
             </div>
           </div>
@@ -326,18 +388,35 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       {/* UI Controls Layer */}
       <div className="relative z-20 flex-1 flex flex-col pt-20 px-6">
         <header className="mb-6 flex justify-between items-start">
-          <div>
-            <h2 className="text-3xl font-light tracking-tight text-white mb-1 shadow-sm">Scan Receipt</h2>
-            <p className="text-white/60 text-xs font-medium uppercase tracking-widest">
-              {isScanning ? 'AI reading with Gemini 2.5 Flash' : 'Items Detected'}
-            </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onViewChange('inventory')}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white rounded-full transition-all border border-white/10 cursor-pointer flex items-center justify-center shrink-0"
+              title="Return"
+              id="scanner-back-header-button"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h2 className="text-3xl font-light tracking-tight text-white mb-1 shadow-sm">Scan Receipt</h2>
+              <p className="text-white/60 text-xs font-medium uppercase tracking-widest">
+                {isScanning ? 'AI reading with Gemini 2.5 Flash' : 'Items Detected'}
+              </p>
+            </div>
           </div>
           {(!isReady || detectedItems.length > 0) && (
             <button 
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                try {
+                  fileInputRef.current?.click();
+                } catch (err: any) {
+                  console.error("Header upload click failed:", err);
+                  setShowPermissionModal(true);
+                }
+              }}
               disabled={isScanning || remainingScans <= 0}
               className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/10 disabled:opacity-30"
-              title="Upload another receipt photo"
+              title={remainingScans <= 0 ? 'Daily Limit Reached' : 'Upload another receipt photo'}
             >
               <Upload className="w-5 h-5 text-white" />
             </button>
@@ -353,7 +432,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         {/* Remaining counts pill */}
         <div className="self-start mb-4">
           <span className="px-3.5 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-[9px] font-extrabold uppercase tracking-widest text-zinc-300 border border-white/5">
-            Remaining scans today: {remainingScans} today
+            REMAINING SCANS: {remainingScans} TODAY
           </span>
         </div>
 
@@ -423,7 +502,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
                 disabled={remainingScans <= 0}
                 className="w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-2xl font-bold uppercase tracking-[0.1em] text-[10px] transition-all border border-white/20 mb-3 disabled:opacity-45"
               >
-                Scan Receipt
+                {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : 'Scan Receipt'}
               </button>
             )}
             <button 
@@ -558,6 +637,37 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
                   </div>
                 )}
               </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Permission Denied Fallback Modal */}
+      <AnimatePresence>
+        {showPermissionModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/85 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-950 border border-zinc-800 rounded-[28px] p-8 max-w-sm w-full text-center space-y-6 shadow-2xl"
+            >
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-500">
+                <Camera className="w-7 h-7" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white tracking-tight">Access Denied</h3>
+                <p className="text-zinc-400 text-xs leading-relaxed">
+                  Camera or storage access is denied. Please reset your browser/app permissions in your device settings to upload receipts.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPermissionModal(false)}
+                className="w-full bg-white hover:bg-zinc-100 text-black py-4.5 rounded-2xl font-bold uppercase tracking-[0.2em] text-[10px] cursor-pointer transition-colors"
+                id="close-permission-modal-btn"
+              >
+                Got It
+              </button>
             </motion.div>
           </div>
         )}

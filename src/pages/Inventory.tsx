@@ -11,6 +11,7 @@ interface InventoryProps {
   onViewChange: (view: View) => void;
   onUpdateInventory: (items: InventoryItem[]) => void;
   onAddPurchaseRecord?: (record: PurchaseRecord) => void;
+  onConsumeItem?: (id: string) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -34,7 +35,8 @@ export default function Inventory({
   onSelectItem, 
   onViewChange,
   onUpdateInventory,
-  onAddPurchaseRecord
+  onAddPurchaseRecord,
+  onConsumeItem
 }: InventoryProps) {
   const [selectedCategory, setSelectedCategory] = useState('All Items');
   const [inventorySearchQuery, setInventorySearchQuery] = useState('');
@@ -86,7 +88,14 @@ export default function Inventory({
   // Handle marking item as consumed (deleting)
   const handleConsume = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // 1. Instant Frontend State Update: immediately filter out the consumed item so it vanishes
     onUpdateInventory(inventory.filter(item => item.id !== id));
+    
+    // 2. Trigger To-Buy List Automation & Backend Mutation via Parent Callback
+    if (onConsumeItem) {
+      onConsumeItem(id);
+    }
   };
 
   // Expiry notification summary
@@ -137,9 +146,9 @@ export default function Inventory({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="pb-32 px-6 pt-24 max-w-2xl mx-auto font-sans"
+      className="pb-32 px-6 pt-24 max-w-lg mx-auto font-sans"
     >
-      <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="mb-8 flex flex-col gap-4">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400 block mb-1">Your Kitchen Shelf</span>
           <h2 className="text-4xl font-light tracking-tight text-ink-black select-none">My Inventory</h2>
@@ -149,7 +158,7 @@ export default function Inventory({
         </div>
 
         {/* Search Bar */}
-        <div className="relative w-full md:w-64">
+        <div className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 w-4 h-4" />
           <input 
             type="text"
@@ -162,8 +171,11 @@ export default function Inventory({
       </header>
 
       {/* Eat First Banner Alarm */}
-      <section className={`mb-10 p-5 rounded-[16px] border ${summary.bg} flex items-start gap-4 transition-all duration-300`}>
-        <div className="w-8 h-8 rounded-full bg-white border border-zinc-100 flex items-center justify-center shrink-0 shadow-sm">
+      <section 
+        onClick={() => onViewChange('recipes')}
+        className={`mb-10 p-5 rounded-[16px] border ${summary.bg} flex items-start gap-4 transition-all duration-250 cursor-pointer hover:shadow-sm hover:scale-[1.01] active:scale-[0.98] select-none group`}
+      >
+        <div className="w-8 h-8 rounded-full bg-white border border-zinc-100 flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105">
           {expiringSoon.length > 2 ? (
             <AlertTriangle className="w-4 h-4 text-orange-600 animate-pulse" />
           ) : (
@@ -171,9 +183,9 @@ export default function Inventory({
           )}
         </div>
         <div className="flex-1">
-          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-0.5">Freshness & Expiration Alert</h4>
-          <p className={`text-xs font-semibold ${summary.color} leading-relaxed`}>
-            {summary.text}
+          <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-0.5 group-hover:text-zinc-500 transition-colors">Freshness & Expiration Alert</h4>
+          <p className={`text-xs font-semibold ${summary.color} leading-relaxed flex items-center gap-1.5`}>
+            <span>{summary.text}</span>
           </p>
         </div>
       </section>
@@ -279,7 +291,7 @@ export default function Inventory({
                     {category} <span className="text-zinc-400 font-medium tracking-normal ml-1 border pl-2 bg-white rounded-md px-1">{items.length}</span>
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                   {items.map((item) => {
                     const isExpiring = item.isExpiringSoon || (item.daysLeft !== undefined && item.daysLeft <= 3);
                     const dayBadge = getDayLabel(item.daysLeft);

@@ -1,15 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  --color-sakura-white: #FFFFFF;
+  --color-sakura-white: #FAFAF8;
   --color-washi-gray: #F3F3F3;
   --color-bamboo-green: #E0EEE0;
+  --color-forest-green: #297347;
+  --color-forest-tint: #ecfdf3;
   --color-sunset-orange: #FFCC99;
-  --color-ink-black: #1A1A1A;
+  --color-terracotta: #c05621;
+  --color-ink-black: #1a1a1a;
   
   --color-background: var(--color-sakura-white);
   --color-primary: var(--color-ink-black);
@@ -27,29 +30,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-ink-black font-sans antialiased selection:bg-washi-gray transition-colors duration-300;
-  }
-  
-  .dark {
-    --color-white: #0a0a0b;
-    --color-black: #ffffff;
-    --color-zinc-50: #141415;
-    --color-zinc-100: #222224;
-    --color-zinc-200: #2c2c2e;
-    --color-zinc-300: #3f3f46;
-    --color-zinc-400: #71717a;
-    --color-zinc-500: #a1a1aa;
-    --color-zinc-600: #e4e4e7;
-    --color-slate-500: #94a3b8;
-    --color-red-50: #451a1a;
-    --color-red-100: #7f1d1d;
-    --color-red-400: #f87171;
-    --color-red-500: #ef4444;
-    --color-ink-black: #fafafa;
-    --color-washi-gray: #18181b;
-    --color-sakura-white: #0a0a0b;
-    --color-background: #0a0a0b;
-    --color-bamboo-green: #4ade80;
+    @apply bg-[var(--color-sakura-white)] text-ink-black font-sans antialiased selection:bg-washi-gray transition-colors duration-300;
   }
 }
 
@@ -58,15 +39,15 @@
 }
 
 .frosted-nav {
-  @apply bg-white/70 backdrop-blur-xl border-t border-zinc-100 transition-colors;
+  @apply bg-[#FAFAF8]/80 backdrop-blur-xl border-t border-zinc-200/60 transition-colors;
 }
 
 .status-fresh {
-  @apply bg-bamboo-green text-green-800 transition-colors;
+  @apply bg-forest-tint text-forest-green transition-colors;
 }
 
 .status-expiring {
-  @apply bg-sunset-orange text-orange-900 transition-colors;
+  @apply bg-orange-100 text-terracotta transition-colors;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -76,9 +57,4 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-div#root:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > header:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1) {
-  background-color: #27aff4 !important;
-}
-
 

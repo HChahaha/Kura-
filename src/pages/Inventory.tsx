@@ -191,7 +191,7 @@ export default function Inventory({
  <div className="flex-1">
  <h4 className="text-[11px] font-semibold text-zinc-500 mb-0.5 group-hover:text-zinc-600 transition-colors">Freshness alert</h4>
  <p className={`text-sm font-medium ${summary.color} leading-relaxed flex items-center gap-1.5`}>
- <span>{summary.text}</span>
+ <span style={{ borderColor: '#313a31', borderStyle: 'solid', color: '#6d856d' }}>{summary.text}</span>
  </p>
  </div>
  </section>

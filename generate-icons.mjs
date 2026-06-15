@@ -9,13 +9,14 @@ async function generateAppIcon(size, filename, radiusPercent, maskable = false) 
     const padding = (size - innerSize) / 2;
 
     const baseSvg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${size}" height="${size}" rx="${rx}" ry="${rx}" fill="#27272a" />
+        <rect width="${size}" height="${size}" rx="${rx}" ry="${rx}" fill="#ffffff" />
         <g transform="translate(${padding}, ${padding}) scale(${innerSize / 100})">
-          <path d="M 32 10 C 15 25, 15 75, 32 90" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M 32 10 L 68 10 C 74 10, 78 14, 78 20 L 78 80 C 78 86, 74 90, 68 90 L 32 90" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="32" y1="10" x2="32" y2="90" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="32" y1="45" x2="72" y2="16" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="32" y1="45" x2="78" y2="86" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 32 10 C 15 25, 15 75, 32 90" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M 32 10 L 68 10 C 74 10, 78 14, 78 20 L 78 80 C 78 86, 74 90, 68 90 L 32 90" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="32" y1="10" x2="32" y2="90" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="32" y1="45" x2="72" y2="16" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="32" y1="45" x2="78" y2="86" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="58" y1="26" x2="58" y2="68" stroke="#000000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
       </svg>`;
 

@@ -315,6 +315,14 @@ Return the response strictly as a clean, minified JSON object matching this sche
 });
 
 async function startServer() {
+  app.get("/site.webmanifest", (req, res) => {
+    res.setHeader("Content-Type", "application/manifest+json");
+    const manifestPath = process.env.NODE_ENV === "production"
+      ? path.join(process.cwd(), "dist", "site.webmanifest")
+      : path.join(process.cwd(), "public", "site.webmanifest");
+    res.sendFile(manifestPath);
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({

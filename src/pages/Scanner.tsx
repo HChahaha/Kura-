@@ -39,14 +39,66 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
  // Load remaining scans on mount
- useEffect(() => {
- async function loadLimits() {
- const userId = auth.currentUser?.uid || '';
- const remaining = await getRemainingScans(userId);
- setRemainingScans(remaining);
- }
- loadLimits();
- }, []);
+   useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    let timeoutId: any = null;
+
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API not supported in this browser context. Try uploading standard image instead.");
+        }
+
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error("Camera initialization timed out (3s limit reached)."));
+          }, 3000);
+        });
+
+        const mediaStream = await Promise.race([
+          navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' }, 
+            audio: false 
+          }),
+          timeoutPromise
+        ]);
+
+        if (timeoutId) clearTimeout(timeoutId);
+
+        activeStream = mediaStream;
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          setIsReady(true);
+        }
+      } catch (err: any) {
+        if (timeoutId) clearTimeout(timeoutId);
+        console.error("Camera access error:", err);
+        const errMsg = (err.message || "").toLowerCase();
+        const errName = (err.name || "").toLowerCase();
+        if (
+          errName === "notallowederror" || 
+          errName === "permissiondeniederror" || 
+          errName === "securityerror" ||
+          errMsg.includes("denied") || 
+          errMsg.includes("permission") ||
+          errMsg.includes("notallowed")
+        ) {
+          setShowPermissionModal(true);
+        }
+        setError(err.message || "Unable to access camera. Use the upload button below.");
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
  useEffect(() => {
  let activeStream: MediaStream | null = null;
@@ -298,52 +350,30 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
  animate={{ opacity: 1 }}
  className="fixed inset-0 z-0 bg-black overflow-hidden flex flex-col"
  >
- {/* Live Camera Backdrop */}
- <div className="absolute inset-0 z-0">
- {isReady ? (
- <video 
- ref={videoRef}
- autoPlay 
- playsInline 
- muted
- className="w-full h-full object-cover opacity-80"
- />
- ) : (
- <div className="w-full h-full bg-zinc-900 flex items-center justify-center p-12 text-center text-ink-black h-screen">
- <div className="space-y-4">
- <Camera className="w-12 h-12 text-white/20 mx-auto" />
- <p className="text-white/40 text-sm font-medium">{error || 'Initializing camera stream...'}</p>
- <button 
- onClick={() => {
- try {
- fileInputRef.current?.click();
- } catch (err: any) {
- console.error("Camera fallback upload click failed:", err);
- setShowPermissionModal(true);
- }
- }}
- disabled={remainingScans <= 0 || isScanning}
- className="mx-auto flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl border border-white/10 transition-all text-xs uppercase tracking-widest font-bold disabled:opacity-40"
- >
- <Upload className="w-4 h-4" />
- {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : 'UPLOAD RECEIPT'}
- </button>
- <input 
- type="file" 
- ref={fileInputRef} 
- onChange={handleFileUpload} 
- className="hidden" 
- accept="image/*"
- />
- <p className="text-white/30 text-[10px] uppercase font-bold tracking-widest block pt-2">
- REMAINING SCANS: {remainingScans} TODAY
- </p>
- </div>
- </div>
- )}
- {/* Dark overlay for readability of UI elements */}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/60 via-transparent to-black/60" />
- </div>
+  {/* Always-mounted hidden input for receipt camera or manual uploads with direct capture on mobile */}
+  <input 
+    type="file" 
+    ref={fileInputRef} 
+    onChange={handleFileUpload} 
+    className="hidden" 
+    accept="image/*"
+    capture="environment"
+  />
+
+  {/* Live Camera Backdrop */}
+  <div className="absolute inset-0 z-0 bg-zinc-950">
+    {isReady && (
+      <video 
+        ref={videoRef}
+        autoPlay 
+        playsInline 
+        muted
+        className="w-full h-full object-cover opacity-80"
+      />
+    )}
+    {/* Dark overlay for readability of UI elements */}
+    <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/60 via-transparent to-black/60" />
+  </div>
 
  {/* Simulated OCR Scanner Overlay */}
  {isScanning && (
@@ -435,6 +465,47 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
  REMAINING SCANS: {remainingScans} TODAY
  </span>
  </div>
+
+  {/* Center Element placeholder if camera is not active and no items yet */}
+  {!isReady && detectedItems.length === 0 && (
+    <div className="flex-1 flex flex-col items-center justify-center py-8">
+      <div className="space-y-6 max-w-sm text-center w-full">
+        <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-zinc-400">
+          <Camera className="w-6 h-6 animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <p className="text-white text-sm font-semibold">
+            {error ? 'Camera Access Restricted' : 'Initializing camera stream...'}
+          </p>
+          {error && (
+            <p className="text-zinc-[400] text-xs leading-relaxed max-w-xs mx-auto">
+              Browser security restricts camera frames inside previews. To use live video scanning, open Kura in a new tab, or choose to upload a receipt photo below.
+            </p>
+          )}
+        </div>
+        <button 
+          onClick={() => {
+            try {
+              fileInputRef.current?.click();
+            } catch (err: any) {
+              console.error("Camera fallback upload click failed:", err);
+              setShowPermissionModal(true);
+            }
+          }}
+          disabled={remainingScans <= 0 || isScanning}
+          className="mx-auto flex items-center justify-center gap-2 bg-white text-zinc-950 hover:bg-zinc-100 px-6 py-4 rounded-2xl transition-all text-sm uppercase tracking-wider font-extrabold disabled:opacity-40 cursor-pointer w-full shadow-lg"
+        >
+          <Upload className="w-4 h-4" />
+          {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : 'UPLOAD RECEIPT'}
+        </button>
+        <p className="text-zinc-500 text-[9px] uppercase font-bold tracking-widest block pt-2">
+          Remaining Scans: {remainingScans}/2 Today
+        </p>
+      </div>
+    </div>
+  )}
+
+
 
  <div className="mt-auto mb-32 space-y-4">
  {/* Extracted Mini List */}

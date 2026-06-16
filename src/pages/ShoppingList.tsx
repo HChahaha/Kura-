@@ -1161,58 +1161,55 @@ export default function ShoppingList({
  </div>
  </div>
  ) : (
- <div className="flex items-center justify-between w-full">
- <div className="flex items-center gap-3.5 text-left flex-1" title="Click to edit item">
- <button onClick={(e) => { e.stopPropagation(); quickCheck(item); }} className="shrink-0 p-1" title="Quick check off without logging details">
- <Circle className="w-5 h-5 text-zinc-400 hover:text-bamboo-green transition-colors" />
- </button>
- <div className="flex-1 cursor-text flex items-start justify-between" onClick={() => startEditingItem(item)}>
- <div className="min-w-0 pr-2">
- <span className="font-semibold text-ink-black text-sm block mb-0.5 truncate">{item.name}</span>
- 
- <div className="flex items-center gap-1.5 flex-wrap">
- <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5 w-fit">
- {getCategoryIcon(item.category)}
- {item.category}
- </span>
- {item.price ? (
- <span className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] border border-[#f0fdf4] rounded-md px-1.5 py-0.5 w-fit">
- <DollarSign className="w-2.5 h-2.5" />
- {item.price}
- </span>
- ) : getLowestHistoricalPrice(item.name) ? (
- <button
- onClick={(e) => { e.stopPropagation(); setSelectedHistoryItemName(item.name); }}
- className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] border border-[#f0fdf4] hover:bg-[#e0eedf] transition-colors rounded-md px-1.5 py-0.5 w-fit cursor-pointer"
- >
- <Crown className="w-2.5 h-2.5" />
- {getLowestHistoricalPrice(item.name)?.price} at {getLowestHistoricalPrice(item.name)?.storeName}
- </button>
- ) : null}
- </div>
- </div>
- {item.amount && (
- <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 bg-zinc-50 border border-zinc-100 px-2 py-1 rounded-md shrink-0">
- {item.amount}
- </span>
- )}
- </div>
- </div>
- <div className="flex items-center gap-2 shrink-0">
- <button 
- onClick={() => initiateCheck(item)}
- className="p-1 px-3 bg-white text-ink-black hover:bg-zinc-100 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all flex items-center gap-1 border border-zinc-300 shadow-sm"
- >
- Buy <ArrowUpRight className="w-3 h-3 text-zinc-500" />
- </button>
- <button 
- onClick={() => handleRemoveItem(item.id)}
- className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
- >
- <Trash2 className="w-4 h-4" />
- </button>
- </div>
- </div>
+ <div className="relative overflow-hidden w-full rounded-[12px] group/item">
+            {/* Swipe Background (Trash) */}
+            <div className="absolute inset-y-0 right-0 w-24 bg-red-50 flex items-center justify-end pr-4 rounded-[12px]">
+              <Trash2 className="w-5 h-5 text-red-500" />
+            </div>
+
+            {/* Draggable surface */}
+            <motion.div
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={{ left: 0.5, right: 0 }}
+              onDragEnd={(e, info) => {
+                if (info.offset.x < -60) handleRemoveItem(item.id);
+              }}
+              className="flex items-center justify-between w-full bg-white relative z-10"
+              style={{ touchAction: 'pan-y' }}
+            >
+              <div className="flex items-center gap-3.5 text-left flex-1 min-w-0 pr-2" title="Click to edit item">
+                <button onClick={(e) => { e.stopPropagation(); quickCheck(item); }} className="shrink-0 p-1" title="Quick check off without logging details">
+                  <Circle className="w-5 h-5 text-zinc-300 hover:text-bamboo-green transition-colors" />
+                </button>
+                <div className="flex-1 cursor-text flex items-center justify-between min-w-0" onClick={() => startEditingItem(item)}>
+                  <div className="min-w-0 pr-2 flex-1 text-left" style={{ minWidth: 0 }}>
+                    <span className="font-bold text-ink-black text-sm block mb-0.5 truncate">{item.name}</span>
+                    
+                    <div className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 truncate">
+                      {item.category && <span>{item.category}</span>}
+                      {item.category && item.amount && <span>&middot;</span>}
+                      {item.amount && <span>x{item.amount}</span>}
+                      {(item.price || getLowestHistoricalPrice(item.name)) && (
+                        <>
+                          <span>&middot;</span>
+                          <span>~${(item.price || getLowestHistoricalPrice(item.name)?.price)?.toString().replace('$', '')}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center shrink-0 ml-1">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); initiateCheck(item); }}
+                  className="px-3 py-1.5 bg-bamboo-green hover:brightness-110 text-white text-[11px] font-bold rounded-[8px] transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" /> Buy
+                </button>
+              </div>
+            </motion.div>
+          </div>
  )}
  </div>
  ))}
@@ -1639,9 +1636,9 @@ export default function ShoppingList({
  <div className="flex items-start justify-between sm:justify-start sm:gap-4 mb-2 sm:mb-1">
  <div>
  <h4 className="font-semibold text-ink-black text-sm mb-1">{record.name}</h4>
- <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 w-fit bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5">
+ <span className="text-[10px] font-bold tracking-wider text-zinc-500 flex items-center gap-1.5 w-fit bg-zinc-50 border border-zinc-100 rounded-md px-1.5 py-0.5">
  {getCategoryIcon(record.category)}
- {record.category}
+ <span>{record.category}</span>
  </span>
  </div>
  <div className="text-right sm:hidden">

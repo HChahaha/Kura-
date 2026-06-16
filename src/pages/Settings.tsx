@@ -37,6 +37,8 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
  return document.documentElement.classList.contains('dark') ? 'Dark Mode' : 'Light Mode';
  });
 
+ const appearances = ['Light Mode', 'Dark Mode'];
+
  const [country, setCountry] = useState(() => {
  return localStorage.getItem('shopping_country') || 'Canada';
  });

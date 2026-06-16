@@ -1,60 +1,65 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Camera, CheckCircle2, Plus, X, Calendar as CalendarIcon, Upload, Loader2, ArrowLeft } from 'lucide-react';
-import { View } from '../types';
-import { FOOD_SHELF_LIFE } from '../constants';
-import { CustomCalendar } from '../components/CustomCalendar';
-import { addDays, format } from 'date-fns';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, ArrowLeft, Loader2, CheckCircle2, X, Plus, Upload } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format, addDays } from 'date-fns';
 import { getRemainingScans, incrementScans } from '../lib/limits';
 import { auth } from '../lib/firebase';
 
-interface ScannerProps {
- onViewChange: (view: View) => void;
- onItemsAdded: (items: any[]) => void;
+const FOOD_SHELF_LIFE: Record<string, number> = {
+  'MILK': 7,
+  'EGGS': 21,
+  'BREAD': 5,
+  'APPLE': 14,
+  'CHICKEN': 3,
+  'BEEF': 3,
+  'FISH': 2,
+};
+
+type ViewState = 'inventory' | 'scanner' | 'add-item';
+
+export interface DetectedItem {
+  id: string;
+  name: string;
+  price: string;
+  category: string;
+  quantity: string;
+  expiryDate: string;
+  storeName: string;
+  purchaseDate: string;
 }
 
-interface DetectedItem {
- id: string;
- name: string;
- price: string;
- category: string;
- quantity: string;
- expiryDate: string;
- storeName: string;
- purchaseDate: string;
+interface ScannerProps {
+  onViewChange: (view: ViewState) => void;
+  onItemsAdded: (items: any[]) => void;
 }
 
 export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
- const videoRef = useRef<HTMLVideoElement>(null);
- const fileInputRef = useRef<HTMLInputElement>(null);
- const [stream, setStream] = useState<MediaStream | null>(null);
- const [isReady, setIsReady] = useState(false);
- const [error, setError] = useState<string | null>(null);
- const [scanError, setScanError] = useState<string | null>(null);
- const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
- const [isScanning, setIsScanning] = useState(false);
- const [editingItem, setEditingItem] = useState<DetectedItem | null>(null);
- const [showCalendar, setShowCalendar] = useState(false);
- const [remainingScans, setRemainingScans] = useState<number>(2);
- const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [detectedItems, setDetectedItems] = useState<DetectedItem[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [editingItem, setEditingItem] = useState<DetectedItem | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [remainingScans, setRemainingScans] = useState<number>(2);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
- // Load remaining scans on mount
-   useEffect(() => {
+  useEffect(() => {
     let activeStream: MediaStream | null = null;
     let timeoutId: any = null;
-
     async function startCamera() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Camera API not supported in this browser context. Try uploading standard image instead.");
+          throw new Error('Camera API not supported in this browser context. Try uploading standard image instead.');
         }
-
         const timeoutPromise = new Promise<MediaStream>((_, reject) => {
           timeoutId = setTimeout(() => {
-            reject(new Error("Camera initialization timed out (3s limit reached)."));
+            reject(new Error('Camera initialization timed out (3s limit reached).'));
           }, 3000);
         });
-
         const mediaStream = await Promise.race([
           navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: 'environment' }, 
@@ -62,247 +67,232 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           }),
           timeoutPromise
         ]);
-
         if (timeoutId) clearTimeout(timeoutId);
-
         activeStream = mediaStream;
         setStream(mediaStream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          setIsReady(true);
-        }
+        setIsReady(true);
       } catch (err: any) {
         if (timeoutId) clearTimeout(timeoutId);
-        console.warn("Camera access error:", err.message || err);
-        const errMsg = (err.message || "").toLowerCase();
-        const errName = (err.name || "").toLowerCase();
-        if (
-          errName === "notallowederror" || 
-          errName === "permissiondeniederror" || 
-          errName === "securityerror" ||
-          errMsg.includes("denied") || 
-          errMsg.includes("permission") ||
-          errMsg.includes("notallowed")
-        ) {
-          setShowPermissionModal(true);
+        console.warn('Camera failed:', err.message);
+        setError(err.message || 'Unable to access camera.');
+        if ((err.name && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) || 
+            (err.message && err.message.toLowerCase().includes('denied'))) {
+           setShowPermissionModal(true);
         }
-        setError(err.message || "Unable to access camera. Use the upload button below.");
       }
     }
-
     startCamera();
-
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (activeStream) {
-        activeStream.getTracks().forEach(track => track.stop());
+        activeStream.getTracks().forEach(track => {
+          try { track.stop(); } catch(e){}
+        });
       }
     };
   }, []);
 
+  useEffect(() => {
+    if (isReady && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [isReady, stream]);
 
+  const processImageFile = async (file: File) => {
+    try {
+      setIsScanning(true);
+      setScanError(null);
+      setDetectedItems([]);
+      const userId = auth.currentUser?.uid || '';
+      const remaining = await getRemainingScans(userId);
+      if (remaining <= 0) {
+        throw new Error("You have reached your daily limit of 2 receipt scans.");
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const base64Data = dataUrl.split(',')[1];
+        
+        const res = await fetch('/api/scan-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageData: base64Data,
+            mimeType: file.type || 'image/jpeg'
+          })
+        });
 
- const handleFinish = () => {
- onItemsAdded(detectedItems.map(item => ({
- name: item.name,
- quantity: item.quantity,
- category: item.category,
- expiryDate: item.expiryDate,
- price: item.price,
- storeName: item.storeName,
- purchaseDate: item.purchaseDate
- })));
- };
+        if (!res.ok) {
+          const errJson = await res.json();
+          throw new Error(errJson.error || "Failed to scan receipt image.");
+        }
 
- const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
- try {
- if (e.target.files && e.target.files[0]) {
- const file = e.target.files[0];
- await processImageFile(file);
- }
- } catch (err: any) {
- console.warn("File upload error caught in handler:", err.message || err);
- const errMsg = (err.message || "").toLowerCase();
- const errName = (err.name || "").toLowerCase();
- if (
- errName === "notallowederror" || 
- errName === "permissiondeniederror" || 
- errName === "securityerror" ||
- errMsg.includes("denied") || 
- errMsg.includes("permission") ||
- errMsg.includes("notallowed")
- ) {
- setShowPermissionModal(true);
- } else {
- setScanError(err.message || "Failed to upload file");
- }
- }
- };
+        const data = await res.json();
+        const newRemaining = await incrementScans(userId);
+        setRemainingScans(newRemaining);
+        const storeName = data.storeName || "Vancouver Merchant";
+        const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
- const processImageFile = async (file: File) => {
- try {
- setIsScanning(true);
- setScanError(null);
- setDetectedItems([]);
+        // [MY PATCH FOR PARSING HERE]
+        if (data.items && Array.isArray(data.items)) {
+          const items = data.items.map((item: any, idx: number) => {
+            const shelfLife = typeof item.name === 'string' ? (FOOD_SHELF_LIFE[item.name] || 7) : 7;
+            let finalPrice = '';
+            if (item.price !== undefined && item.price !== null) {
+              let pStr = String(item.price).trim();
+              let isNegative = pStr.includes('-');
+              pStr = pStr.replace(/[^0-9.]/g, '');
+              let numParsed = parseFloat(pStr);
+              if (!isNaN(numParsed)) {
+                if (isNegative) numParsed = -numParsed;
+                finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+              }
+            }
+            return {
+              id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
+              name: typeof item.name === 'string' ? item.name : 'Unknown Item',
+              price: finalPrice,
+              category: typeof item.category === 'string' ? item.category : 'Pantry',
+              quantity: typeof item.quantity === 'string' ? item.quantity : '1',
+              expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+              storeName,
+              purchaseDate
+            };
+          }).filter((i: any) => i.name !== 'Unknown Item');
+          if (items.length > 0) {
+            setDetectedItems(items);
+            setScanError(null);
+          } else {
+            setDetectedItems([]);
+            setScanError(null);
+          }
+        } else {
+          setDetectedItems([]);
+          setScanError(null);
+        }
+      };
+    } catch (err: any) {
+      console.warn("File selection/validation error:", err.message);
+      setScanError(err.message || "Unable to read receipt");
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
- const userId = auth.currentUser?.uid || '';
- const remaining = await getRemainingScans(userId);
- if (remaining <= 0) {
- throw new Error("You have reached your daily limit of 2 receipt scans.");
- }
+  const handleCameraCapture = async () => {
+    if (!videoRef.current) return;
+    try {
+      setIsScanning(true);
+      setScanError(null);
+      setDetectedItems([]);
+      const userId = auth.currentUser?.uid || '';
+      const remaining = await getRemainingScans(userId);
+      if (remaining <= 0) {
+        throw new Error("You have reached your daily limit of 2 receipt scans.");
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error("Could not access photo canvas");
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      const base64Data = dataUrl.split(',')[1];
+      
+      const res = await fetch('/api/scan-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageData: base64Data,
+          mimeType: 'image/jpeg'
+        })
+      });
 
- const reader = new FileReader();
- const base64Data = await new Promise<string>((resolve, reject) => {
- reader.onload = () => resolve((reader.result as string).split(',')[1]);
- reader.onerror = (err) => reject(err);
- reader.readAsDataURL(file);
- });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Failed to scan camera snapshot.");
+      }
+      const data = await res.json();
+      const newRemaining = await incrementScans(userId);
+      setRemainingScans(newRemaining);
+      const storeName = data.storeName || "Vancouver Merchant";
+      const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
- const res = await fetch('/api/scan-receipt', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
- imageData: base64Data,
- mimeType: file.type
- })
- });
+      if (data.items && Array.isArray(data.items)) {
+        const items = data.items.map((item: any, idx: number) => {
+          const shelfLife = typeof item.name === 'string' ? (FOOD_SHELF_LIFE[item.name] || 7) : 7;
+          let finalPrice = '';
+          if (item.price !== undefined && item.price !== null) {
+            let pStr = String(item.price).trim();
+            let isNegative = pStr.includes('-');
+            pStr = pStr.replace(/[^0-9.]/g, '');
+            let numParsed = parseFloat(pStr);
+            if (!isNaN(numParsed)) {
+              if (isNegative) numParsed = -numParsed;
+              finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+            }
+          }
+          return {
+            id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
+            name: typeof item.name === 'string' ? item.name : 'Unknown Item',
+            price: finalPrice,
+            category: typeof item.category === 'string' ? item.category : 'Pantry',
+            quantity: typeof item.quantity === 'string' ? item.quantity : '1',
+            expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+            storeName,
+            purchaseDate
+          };
+        }).filter((i: any) => i.name !== 'Unknown Item');
+        
+        if (items.length > 0) {
+          setDetectedItems(items);
+          setScanError(null);
+        } else {
+          setDetectedItems([]);
+          setScanError(null);
+        }
+      } else {
+        setDetectedItems([]);
+        setScanError(null);
+      }
+    } catch (err: any) {
+      console.warn("Camera capture error:", err.message);
+      setScanError(err.message || "Failed to capture receipt");
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
- if (!res.ok) {
- const errJson = await res.json();
- throw new Error(errJson.error || "Failed to scan receipt image.");
- }
+  const handleFinish = () => {
+    onItemsAdded(detectedItems.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      category: item.category,
+      expiryDate: item.expiryDate,
+      price: item.price,
+      storeName: item.storeName,
+      purchaseDate: item.purchaseDate
+    })));
+  };
 
- const data = await res.json();
- const newRemaining = await incrementScans(userId);
- setRemainingScans(newRemaining);
-
- const storeName = data.storeName || "T&T Supermarket";
- const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
-
- if (data.items && Array.isArray(data.items) && data.items.length > 0) {
- const items = data.items.map((item: any, idx: number) => {
- const shelfLife = FOOD_SHELF_LIFE[item.name] || 7;
- return {
- id: `scanned-${idx}-${Math.random().toString(36).substring(7)}`,
- name: item.name || 'Generic Item',
- price: item.price ? `$${parseFloat(item.price).toFixed(2)}` : '$1.99',
- category: item.category || 'Pantry',
- quantity: item.quantity || '1 unit',
- expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
- storeName,
- purchaseDate
- };
- });
- setDetectedItems(items);
- setScanError(null);
- } else {
- throw new Error("Could not detect any valid grocery item lines in receipt. Try another photo.");
- }
- } catch (err: any) {
- console.warn(err.message || err);
- const errMsg = (err.message || "").toLowerCase();
- const errName = (err.name || "").toLowerCase();
- if (
- errName === "notallowederror" || 
- errName === "permissiondeniederror" || 
- errName === "securityerror" ||
- errMsg.includes("denied") || 
- errMsg.includes("permission") ||
- errMsg.includes("notallowed")
- ) {
- setShowPermissionModal(true);
- }
- setScanError(err.message || "Unable to read receipt");
- } finally {
- setIsScanning(false);
- }
- };
-
- const handleCameraCapture = async () => {
- if (!videoRef.current) return;
- try {
- setIsScanning(true);
- setScanError(null);
- setDetectedItems([]);
-
- const userId = auth.currentUser?.uid || '';
- const remaining = await getRemainingScans(userId);
- if (remaining <= 0) {
- throw new Error("You have reached your daily limit of 2 receipt scans.");
- }
-
- // Draw video frame to temporary canvas
- const canvas = document.createElement('canvas');
- canvas.width = videoRef.current.videoWidth || 640;
- canvas.height = videoRef.current.videoHeight || 480;
- const ctx = canvas.getContext('2d');
- if (!ctx) throw new Error("Could not access photo canvas");
- 
- ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
- const dataUrl = canvas.toDataURL('image/jpeg');
- const base64Data = dataUrl.split(',')[1];
-
- const res = await fetch('/api/scan-receipt', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
- imageData: base64Data,
- mimeType: 'image/jpeg'
- })
- });
-
- if (!res.ok) {
- const errJson = await res.json();
- throw new Error(errJson.error || "Failed to scan camera snapshot.");
- }
-
- const data = await res.json();
- const newRemaining = await incrementScans(userId);
- setRemainingScans(newRemaining);
-
- const storeName = data.storeName || "Vancouver Merchant";
- const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
-
- if (data.items && Array.isArray(data.items) && data.items.length > 0) {
- const items = data.items.map((item: any, idx: number) => {
- const shelfLife = FOOD_SHELF_LIFE[item.name] || 7;
- return {
- id: `scanned-${idx}-${Math.random().toString(36).substring(7)}`,
- name: item.name || 'Generic Item',
- price: item.price ? `$${parseFloat(item.price).toFixed(2)}` : '$1.99',
- category: item.category || 'Pantry',
- quantity: item.quantity || '1 unit',
- expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
- storeName,
- purchaseDate
- };
- });
- setDetectedItems(items);
- setScanError(null);
- } else {
- throw new Error("Could not parse items. Please make sure food items & prices are visible.");
- }
- } catch (err: any) {
- console.warn(err.message || err);
- const errMsg = (err.message || "").toLowerCase();
- const errName = (err.name || "").toLowerCase();
- if (
- errName === "notallowederror" || 
- errName === "permissiondeniederror" || 
- errName === "securityerror" ||
- errMsg.includes("denied") || 
- errMsg.includes("permission") ||
- errMsg.includes("notallowed")
- ) {
- setShowPermissionModal(true);
- }
- setScanError(err.message || "Failed to capture receipt");
- } finally {
- setIsScanning(false);
- }
- };
-
- return (
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        await processImageFile(file);
+      }
+    } catch (err: any) {
+      console.warn('File upload error caught in handler:', err.message || err);
+      const errName = (err.name || '').toLowerCase();
+      if ((errName === 'notallowederror' || errName === 'permissiondeniederror' || err.message.includes('denied'))) {
+        setShowPermissionModal(true);
+      } else {
+        setScanError(err.message || 'Failed to upload file');
+      }
+    }
+  };
+  return (
  <motion.div 
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
@@ -321,7 +311,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
  {/* Simulated OCR Scanner Overlay */}
  {isScanning && (
- <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center bg-black/40">
+ <div className="absolute inset-0 z-[25] pointer-events-none flex items-center justify-center">
  <div className="w-[80%] aspect-[3/4] relative">
  {/* Brackets */}
  <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-[#18181b]/80 rounded-tl-lg" />
@@ -416,6 +406,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
     <div className="absolute inset-0 bg-zinc-100 flex items-center justify-center">
       {isReady ? (
         <video 
+          id="viewfinder"
           ref={videoRef}
           autoPlay 
           playsInline 

@@ -183,7 +183,7 @@ app.post("/api/scan-receipt", async (req, res) => {
     });
 
     const parts = [
-      { text: "Parse the receipt line-by-line and extract the store name, purchase date, and array of purchased, physical grocery items found (skip taxes, discounts, non-food items if possible). For each item extract the name, price paid (numeric), and quantity/weight. Return structured JSON." },
+      { text: "Extract store name, purchase date, and array of purchased grocery items. Do NOT use strict formatting rules—normalize into standard strings. Cleanly handle negative numeral strings (like '10.00-' or discounts) and multi-items. For dates, return YYYY-MM-DD. Ignore taxes/fees. Extract only food items. Return structured JSON." },
       { inlineData: { data: imageData, mimeType: mimeType } }
     ];
 
@@ -203,7 +203,7 @@ app.post("/api/scan-receipt", async (req, res) => {
                  type: Type.OBJECT,
                  properties: {
                    name: { type: Type.STRING },
-                   price: { type: Type.NUMBER },
+                   price: { type: Type.STRING, description: "Price paid. Return exactly as string, e.g. '10.00', '3.00-'." },
                    quantity: { type: Type.STRING, description: "Quantity or weight like '1', '0.5 kg', '2 lbs' etc" },
                    category: { type: Type.STRING, description: "Best category from: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household" }
                  }

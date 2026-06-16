@@ -1186,16 +1186,35 @@ export default function ShoppingList({
                   <div className="min-w-0 pr-2 flex-1 text-left" style={{ minWidth: 0 }}>
                     <span className="font-bold text-ink-black text-sm block mb-0.5 truncate">{item.name}</span>
                     
-                    <div className="flex items-center gap-1 text-[11px] font-medium text-zinc-500 truncate">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 truncate mt-0.5 h-5">
                       {item.category && <span>{item.category}</span>}
                       {item.category && item.amount && <span>&middot;</span>}
                       {item.amount && <span>x{item.amount}</span>}
-                      {(item.price || getLowestHistoricalPrice(item.name)) && (
-                        <>
-                          <span>&middot;</span>
-                          <span>~${(item.price || getLowestHistoricalPrice(item.name)?.price)?.toString().replace('$', '')}</span>
-                        </>
-                      )}
+                      
+                      {(() => {
+                        const lowestPast = getLowestHistoricalPrice(item.name);
+                        if (lowestPast) {
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedHistoryItemName(item.name);
+                              }}
+                              className="ml-1 px-1.5 py-0.5 bg-[#eef5f1] text-[#2c8c2c] border border-[#d3e8d8] rounded-full flex items-center gap-1 hover:bg-[#d8eedf] transition-colors"
+                            >
+                              <span>👑</span>
+                              <span className="font-bold">${(lowestPast.price)?.toString().replace('$', '')}</span>
+                            </button>
+                          );
+                        } else if (item.price) {
+                          return (
+                            <div className="ml-1 px-1.5 py-[1px] bg-zinc-100 text-zinc-500 border border-transparent rounded-full flex items-center">
+                              <span className="font-medium">~${(item.price).toString().replace('$', '')} est.</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1210,9 +1229,9 @@ export default function ShoppingList({
               </div>
             </motion.div>
           </div>
- )}
- </div>
- ))}
+        )}
+      </div>
+    ))}
  </div>
  </div>
  ))}
@@ -1533,64 +1552,111 @@ export default function ShoppingList({
  exit={{ scale: 0.95, opacity: 0 }}
  className="relative w-full max-w-lg bg-white rounded-[24px] shadow-2xl border border-zinc-100 overflow-hidden"
  >
- <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between">
- <div>
- <h3 className="text-lg font-light text-ink-black">{selectedHistoryItemName} <span className="font-semibold text-zinc-400">History</span></h3>
- </div>
- <button 
- onClick={() => setSelectedHistoryItemName(null)}
- className="w-8 h-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center hover:bg-zinc-100 transition-colors"
- >
- <Plus className="w-5 h-5 text-zinc-400 rotate-45" />
- </button>
- </div>
- <div className="p-6 max-h-[60vh] overflow-y-auto no-scrollbar bg-zinc-50/50">
- {selectedHistoryData.records.length > 0 ? (
- <div className="space-y-3">
- {selectedHistoryData.records.map((record) => (
- <div 
- key={record.id} 
- className={`p-4 rounded-[16px] border ${record.id === selectedHistoryData.lowestRecordId ? 'bg-green-50/50 border-[#f0fdf4]' : 'bg-white border-zinc-100'} flex justify-between items-center`}
- >
- <div>
- <div className="flex items-center gap-2 mb-1">
- <h4 className="text-sm font-semibold text-ink-black">{record.storeName}</h4>
- {record.id === selectedHistoryData.lowestRecordId && (
- <span className="text-[10px] font-bold tracking-wider text-[#2c8c2c] flex items-center gap-1 bg-[#eef5f1] px-1.5 py-0.5 rounded border border-[#f0fdf4]">
- <Crown className="w-3 h-3" /> BEST PRICE
- </span>
- )}
- </div>
- <div className="flex items-center gap-3 text-xs text-zinc-500 font-medium">
- <div className="flex items-center gap-1">
- <Calendar className="w-3.5 h-3.5" />
- {record.purchaseDate}
- </div>
- </div>
- </div>
- <div className="text-right flex flex-col items-end">
- <div className="text-lg text-[#2c8c2c] font-light">
- {record.price}
- </div>
- {record.quantityBought && record.quantityBought !== '1' && (
- <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1">
- / {record.quantityBought}
- </div>
- )}
- </div>
- </div>
- ))}
- </div>
- ) : (
- <div className="text-center py-8 text-zinc-500 text-sm">No history found.</div>
- )}
- </div>
- </motion.div>
- </div>
- )}
- </AnimatePresence>
+ <div className="px-6 py-5 flex items-start justify-between">
+            <div>
+              <h3 className="text-xl font-medium text-ink-black mb-1">{selectedHistoryItemName}</h3>
+              <p className="text-[13px] text-zinc-500 font-medium">
+                {selectedHistoryData.records.length} purchase{selectedHistoryData.records.length !== 1 ? 's' : ''} recorded across {new Set(selectedHistoryData.records.map(r => r.storeName)).size} store{new Set(selectedHistoryData.records.map(r => r.storeName)).size !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <button 
+              onClick={() => setSelectedHistoryItemName(null)}
+              className="w-10 h-10 rounded-[12px] border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 transition-colors"
+            >
+              <Plus className="w-5 h-5 text-zinc-600 rotate-45" />
+            </button>
+          </div>
+          <div className="px-6 pb-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+            {selectedHistoryData.records.length > 0 ? (
+              <>
+                {(() => {
+                   const lowest = selectedHistoryData.records.find(r => r.id === selectedHistoryData.lowestRecordId);
+                   const highest = [...selectedHistoryData.records].sort((a,b) => {
+                     const getNum = (p) => { const m = p.match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+                     return getNum(b.price) - getNum(a.price);
+                   })[0];
+                   
+                   if (!lowest) return null;
+                   
+                   const getNum = (p) => { const m = p.match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+                   const saveAmt = getNum(highest.price) - getNum(lowest.price);
+                   const saveText = saveAmt > 0 ? `Save $${saveAmt.toFixed(2)} vs highest` : '';
 
- {/* Part 3: Historical References Database */}
+                   return (
+                     <div className="bg-[#f0fdf4] border border-[#d3e8d8] rounded-[16px] p-5 mb-6 shadow-sm">
+                       <div className="flex justify-between items-start mb-2">
+                         <div className="text-[11px] font-bold text-[#2c8c2c] tracking-wider uppercase">YOUR LOWEST EVER</div>
+                         {saveText && (
+                           <div className="px-2.5 py-0.5 bg-[#d8eedf] text-[#2c8c2c] text-[10px] font-bold rounded-full">
+                             {saveText}
+                           </div>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-3">
+                         <span className="text-3xl leading-none">👑</span>
+                         <div>
+                           <div className="text-3xl font-semibold text-[#115e11] leading-none mb-1">
+                             ${(lowest.price).replace('$', '')}
+                           </div>
+                           <div className="text-[13px] font-medium text-[#2c8c2c]">
+                             {lowest.storeName} &middot; {new Date(lowest.purchaseDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   );
+                })()}
+
+                <div className="text-[10px] font-bold text-zinc-400 tracking-wider mb-5 uppercase px-2">FULL PURCHASE HISTORY</div>
+                
+                <div className="relative border-l border-zinc-200 ml-[11px] pl-6 pb-2 space-y-4">
+                  {selectedHistoryData.records.map((record) => {
+                    const isLowest = record.id === selectedHistoryData.lowestRecordId;
+                    const isReceipt = (record as any).source === 'Receipt scan' || record.storeName.toLowerCase().includes('scan') || (!record.hasOwnProperty('source') && record.purchaseDate);
+
+                    return (
+                      <div key={record.id} className="relative">
+                        <div className={`absolute -left-[30.5px] top-4 w-[13px] h-[13px] rounded-full border-2 border-white shadow-sm ${isLowest ? 'bg-[#2c8c2c]' : 'bg-transparent border-[2px] !border-zinc-300'}`} />
+
+                        <div className={`p-4 rounded-[16px] border ${isLowest ? 'bg-[#f5fbf7] border-[#d3e8d8]' : 'bg-[#fafafa] border-zinc-150'} flex justify-between items-center transition-colors`}>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-[15px] font-medium text-ink-black">{record.storeName}</h4>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[12px] text-zinc-500 font-medium whitespace-nowrap">
+                              {isReceipt ? <Receipt className="w-4 h-4 opacity-70" /> : <CheckSquare className="w-4 h-4 opacity-70" />}
+                              <span>{isReceipt ? 'Receipt scan' : 'Manual entry'}</span>
+                            </div>
+                            {isLowest && (
+                              <div className="mt-2 text-[10px] font-bold text-[#2c8c2c] bg-[#eef5f1] inline-flex px-2 py-0.5 rounded border border-[#d3e8d8]">
+                                Lowest price
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-medium text-ink-black mb-1">
+                              ${record.price.replace('$', '')}
+                            </div>
+                            <div className="text-[12px] font-medium text-zinc-500">
+                              {new Date(record.purchaseDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-zinc-400 font-medium">No history available</div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>
+
+  {/* Part 3: Historical References Database */}
  <section className="mt-16 border-t border-zinc-100 pt-12">
  <header className="mb-6 flex flex-col gap-4">
  <div>

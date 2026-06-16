@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import multer from "multer";
 
 dotenv.config();
 
@@ -165,16 +166,31 @@ app.post("/api/scan-food", async (req, res) => {
   }
 });
 
-app.post("/api/scan-receipt", async (req, res) => {
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
+});
+
+app.post("/api/scan-receipt", upload.single('file'), async (req, res) => {
   try {
-    const { imageData, mimeType } = req.body;
-    
+    let base64Data: string | undefined;
+    let mimeType: string | undefined;
+
+    // Check if uploaded via form-data or JSON base64
+    if (req.file) {
+      base64Data = req.file.buffer.toString("base64");
+      mimeType = req.file.mimetype;
+    } else if (req.body && req.body.imageData) {
+      base64Data = req.body.imageData;
+      mimeType = req.body.mimeType || "image/jpeg";
+    }
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Gemini API key is missing." });
     }
 
-    if (!imageData || !mimeType) {
-      return res.status(400).json({ error: "Missing image data." });
+    if (!base64Data) {
+      return res.status(400).json({ error: "Missing image data or file." });
     }
 
     const ai = new GoogleGenAI({ 
@@ -182,9 +198,21 @@ app.post("/api/scan-receipt", async (req, res) => {
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
     });
 
+    const promptText = `Analyze this receipt image from any commercial store or supermarket (e.g., T&T Supermarket, Costco, Real Canadian Superstore, Walmart, Safeway, local grocery stores, specialty shops, etc.). 
+Your sole task is to visually locate, extract, and normalize the items into a structured list. Ignore store banners, loyalty points, or payment details. Focus strictly on extracting: Product Name, Unit Price/Total Price, and Quantity.
+
+Enforce these rules strictly:
+1. Return our standardized JSON object schema, even if the receipt is heavily crumpled, stained, or handwritten.
+2. If the store name is not visible, clear, or missing, output "Unknown Store".
+3. If the purchase date is not visible, empty, or unreadable, output the current date of 2026-06-16 or a fallback like the current day.
+4. If a line item is too blurry or unreadable, output it as best as it can or label it "Unknown Item" with price "$0.00", allowing the user to edit it manually, rather than throwing a system-level parsing error.
+5. In your array of items, make sure to ignore taxes, fee lines, discounts as separate items (you can subtract discounts from item prices or ignore discount lines completely).
+6. Categories MUST be mapped strictly to one of these values: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household. Fallback to "Pantry" if uncertain.
+`;
+
     const parts = [
-      { text: "Extract store name, purchase date, and array of purchased grocery items. Do NOT use strict formatting rules—normalize into standard strings. Cleanly handle negative numeral strings (like '10.00-' or discounts) and multi-items. For dates, return YYYY-MM-DD. Ignore taxes/fees. Extract only food items. Return structured JSON." },
-      { inlineData: { data: imageData, mimeType: mimeType } }
+      { text: promptText },
+      { inlineData: { data: base64Data, mimeType: mimeType } }
     ];
 
     const response = await ai.models.generateContent({
@@ -206,16 +234,19 @@ app.post("/api/scan-receipt", async (req, res) => {
                    price: { type: Type.STRING, description: "Price paid. Return exactly as string, e.g. '10.00', '3.00-'." },
                    quantity: { type: Type.STRING, description: "Quantity or weight like '1', '0.5 kg', '2 lbs' etc" },
                    category: { type: Type.STRING, description: "Best category from: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household" }
-                 }
+                 },
+                 required: ["name"]
                }
              }
-          }
+          },
+          required: ["storeName", "items"]
         }
       }
     });
 
     res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
+    console.error("Gemini API Receipt Error:", error);
     res.status(500).json({ error: error.message || "Failed to scan receipt" });
   }
 });

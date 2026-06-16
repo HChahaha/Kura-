@@ -136,7 +136,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const processImageFile = async (file: File) => {
     try {
       setIsScanning(true);
-      setScanStatus("Analyzing receipt... ⏳");
+      setScanStatus("Uploading your receipt... ⏳");
       setScanError(null);
       setDetectedItems([]);
       const userId = auth.currentUser?.uid || '';
@@ -147,58 +147,83 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
       let activeFile: Blob = file;
       const fileName = file.name ? file.name.toLowerCase() : '';
+      let data: any;
+      let usedMultipart = false;
 
-      // Check for iOS format HEIC / HEIF
-      if (fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif') {
-        try {
-          setScanStatus("Converting iOS HEIC image, please wait... ⏳");
-          const heic2any = (await import('heic2any')).default;
-          const converted = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.8
-          });
-          if (Array.isArray(converted)) {
-            activeFile = converted[0];
-          } else {
-            activeFile = converted;
-          }
-        } catch (convErr: any) {
-          console.warn("Client side HEIC converter failed, attempt uploading directly:", convErr);
+      // 1. Primary Attempt: Direct Multi-part Form Data Upload (extremely fast & native browser stream)
+      try {
+        setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const res = await fetch('/api/scan-receipt', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          data = await res.json();
+          usedMultipart = true;
+        } else {
+          console.warn("Direct multipart form-data upload returned non-200, rolling back to base64 fallback...");
         }
+      } catch (multipartErr) {
+        console.warn("Direct multipart form-data upload failed, rolling back to base64 fallback:", multipartErr);
       }
 
-      // Read to Base64 (fully awaited to prevent premature loader dismissal)
-      setScanStatus("Parsing your Costco receipt with Gemini AI... ⏳");
+      // 2. Secondary Fallback Attempt: Base64 JSON POST (including client-side HEIC conversion)
+      if (!usedMultipart) {
+        // Check for iOS format HEIC / HEIF for local conversion if we HAVE to read base64
+        if (fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif') {
+          try {
+            setScanStatus("Converting iOS HEIC image, please wait... ⏳");
+            const heic2any = (await import('heic2any')).default;
+            const converted = await heic2any({
+              blob: file,
+              toType: "image/jpeg",
+              quality: 0.8
+            });
+            if (Array.isArray(converted)) {
+              activeFile = converted[0];
+            } else {
+              activeFile = converted;
+            }
+          } catch (convErr: any) {
+            console.warn("Client side HEIC converter failed, attempt uploading directly as-is:", convErr);
+          }
+        }
 
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read image file."));
-        reader.readAsDataURL(activeFile);
-      });
+        setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Failed to read image file."));
+          reader.readAsDataURL(activeFile);
+        });
 
-      const base64Data = dataUrl.split(',')[1];
-      const mimeType = activeFile.type || 'image/jpeg';
-      
-      const res = await fetch('/api/scan-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageData: base64Data,
-          mimeType: mimeType
-        })
-      });
+        const base64Data = dataUrl.split(',')[1];
+        const mimeType = activeFile.type || 'image/jpeg';
+        
+        const res = await fetch('/api/scan-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageData: base64Data,
+            mimeType: mimeType
+          })
+        });
 
-      if (!res.ok) {
-        const errJson = await res.json();
-        throw new Error(errJson.error || "Failed to scan receipt image.");
+        if (!res.ok) {
+          const errJson = await res.json();
+          throw new Error(errJson.error || "Failed to scan receipt image.");
+        }
+
+        data = await res.json();
       }
 
-      const data = await res.json();
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
-      const storeName = data.storeName || "Costco Wholesale"; // Fallback to Costco
+      const storeName = data.storeName || "Unknown Store";
       const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
       if (data.items && Array.isArray(data.items)) {
@@ -221,14 +246,14 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           return {
             id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
             name: typeof item.name === 'string' ? item.name : 'Unknown Item',
-            price: finalPrice,
+            price: finalPrice || '$0.00',
             category: typeof item.category === 'string' ? item.category : 'Pantry',
             quantity: typeof item.quantity === 'string' ? item.quantity : '1',
             expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
             storeName,
             purchaseDate
           };
-        }).filter((i: any) => i.name !== 'Unknown Item');
+        });
 
         if (items.length > 0) {
           setDetectedItems(items);
@@ -271,7 +296,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const dataUrl = canvas.toDataURL('image/jpeg');
       const base64Data = dataUrl.split(',')[1];
       
-      setScanStatus("Parsing your Costco receipt with Gemini... ⏳");
+      setScanStatus("Parsing receipt lines with Gemini... ⏳");
       const res = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,7 +313,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const data = await res.json();
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
-      const storeName = data.storeName || "Costco Wholesale"; // Fallback to Costco
+      const storeName = data.storeName || "Unknown Store";
       const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
       if (data.items && Array.isArray(data.items)) {
@@ -311,21 +336,21 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           return {
             id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
             name: typeof item.name === 'string' ? item.name : 'Unknown Item',
-            price: finalPrice,
+            price: finalPrice || '$0.00',
             category: typeof item.category === 'string' ? item.category : 'Pantry',
             quantity: typeof item.quantity === 'string' ? item.quantity : '1',
             expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
             storeName,
             purchaseDate
           };
-        }).filter((i: any) => i.name !== 'Unknown Item');
+        });
         
         if (items.length > 0) {
           setDetectedItems(items);
           setScanError(null);
         } else {
           setDetectedItems([]);
-          setScanError("No valid ingredients detected. Please ensure the lens has sufficient lightning.");
+          setScanError("No valid ingredients detected. Please ensure the lens has sufficient lighting.");
         }
       } else {
         setDetectedItems([]);
@@ -535,7 +560,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               <Upload className="w-8 h-8 text-[#18181b]" />
             </div>
             <div className="space-y-2 max-w-sm mb-6">
-              <p className="text-[#18181b] text-base font-semibold">Choose Costco Receipt Photo</p>
+              <p className="text-[#18181b] text-base font-semibold">Choose Receipt Photo</p>
               <p className="text-zinc-500 text-xs leading-relaxed">
                 Supports Standard Camera images, JPEGs, PNGs, and iOS album .HEIC files. Daily limit applies.
               </p>

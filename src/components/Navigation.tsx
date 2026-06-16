@@ -131,15 +131,13 @@ export function TopBar({ currentView, onViewChange, inventory = [], shoppingList
 }
 
 export function BottomNav({ currentView, onViewChange }: NavigationProps) {
- if (currentView === 'auth') return null;
+ if (currentView === 'auth' || currentView === 'scanner') return null;
  const navItems = [
  { id: 'shopping', label: 'To Buy', icon: ShoppingCart },
  { id: 'inventory', label: 'Inventory', icon: Archive },
  { id: 'recipes', label: 'Recipes', icon: ChefHat },
  { id: 'settings', label: 'Settings', icon: Settings },
  ];
-
- const isScanner = currentView === 'scanner';
 
  return (
  <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 transition-colors duration-500 ${

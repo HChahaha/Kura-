@@ -50,7 +50,13 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   
   // Tab selector: 'camera' | 'album'
-  const [scanTab, setScanTab] = useState<'camera' | 'album'>('camera');
+  const [scanTab, setScanTab] = useState<'camera' | 'album'>(() => {
+    try {
+      return (typeof window !== 'undefined' && window.self !== window.top) ? 'album' : 'camera';
+    } catch (e) {
+      return 'album';
+    }
+  });
 
   // Camera initialization conditional on scanTab === 'camera'
   useEffect(() => {
@@ -93,7 +99,11 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       } catch (err: any) {
         if (timeoutId) clearTimeout(timeoutId);
         console.warn('Camera failed:', err.message);
-        setError(err.message || 'Unable to access camera.');
+        let errorMsg = err.message || 'Unable to access camera.';
+        if (errorMsg.includes('expected pattern') || errorMsg === 'The string did not match the expected pattern.') {
+          errorMsg = 'This browser (Safari) blocks camera streams inside sandboxed preview frames. Please switch to "Upload from Album" instead.';
+        }
+        setError(errorMsg);
         if ((err.name && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) || 
             (err.message && err.message.toLowerCase().includes('denied'))) {
            setShowPermissionModal(true);

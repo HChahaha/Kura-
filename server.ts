@@ -180,9 +180,23 @@ app.post("/api/scan-receipt", upload.single('file'), async (req, res) => {
     if (req.file) {
       base64Data = req.file.buffer.toString("base64");
       mimeType = req.file.mimetype;
+      const ext = path.extname(req.file.originalname || "").toLowerCase();
+      if (ext === ".heic" || ext === ".heif") {
+        mimeType = "image/heic";
+      } else if (mimeType === "application/octet-stream" || !mimeType) {
+        if (ext === ".png") mimeType = "image/png";
+        else if (ext === ".webp") mimeType = "image/webp";
+        else if (ext === ".heic" || ext === ".heif") mimeType = "image/heic";
+        else mimeType = "image/jpeg";
+      }
     } else if (req.body && req.body.imageData) {
       base64Data = req.body.imageData;
       mimeType = req.body.mimeType || "image/jpeg";
+    }
+
+    const supportedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+    if (!mimeType || !supportedMimeTypes.includes(mimeType)) {
+      mimeType = "image/jpeg";
     }
 
     if (!process.env.GEMINI_API_KEY) {

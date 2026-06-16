@@ -377,6 +377,24 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
     })));
   };
 
+  const triggerImagePicker = () => {
+    try {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          processImageFile(file);
+        }
+      };
+      fileInput.click();
+    } catch (err: any) {
+      console.warn("Dynamic file input trigger failed:", err);
+      fileInputRef.current?.click();
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       if (e.target.files && e.target.files[0]) {
@@ -470,8 +488,8 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           {detectedItems.length > 0 && (
             <button 
               onClick={() => {
-                try { fileInputRef.current?.click(); } 
-                catch (err) { setShowPermissionModal(true); }
+                if (remainingScans <= 0) return;
+                triggerImagePicker();
               }}
               disabled={isScanning || remainingScans <= 0}
               className="w-10 h-10 bg-white hover:bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200 shadow-sm transition-all disabled:opacity-30 cursor-pointer"
@@ -567,13 +585,13 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
             </div>
             <button 
               onClick={() => {
-                try { fileInputRef.current?.click(); } 
-                catch (err) { setShowPermissionModal(true); }
+                if (remainingScans <= 0) return;
+                triggerImagePicker();
               }}
               disabled={remainingScans <= 0 || isScanning}
               className="px-6 py-3 bg-[#18181b] hover:bg-zinc-800 text-white rounded-2xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md disabled:opacity-50 cursor-pointer"
             >
-              Select Receipt Image
+              Choose receipt photo
             </button>
           </div>
         )}

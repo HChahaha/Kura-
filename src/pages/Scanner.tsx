@@ -171,28 +171,8 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         console.warn("Direct multipart form-data upload failed, rolling back to base64 fallback:", multipartErr);
       }
 
-      // 2. Secondary Fallback Attempt: Base64 JSON POST (including client-side HEIC conversion)
+      // 2. Secondary Fallback Attempt: Base64 JSON POST (bypass heic2any to prevent iOS DOMExceptions)
       if (!usedMultipart) {
-        // Check for iOS format HEIC / HEIF for local conversion if we HAVE to read base64
-        if (fileName.endsWith('.heic') || fileName.endsWith('.heif') || file.type === 'image/heic' || file.type === 'image/heif') {
-          try {
-            setScanStatus("Converting iOS HEIC image, please wait... ⏳");
-            const heic2any = (await import('heic2any')).default;
-            const converted = await heic2any({
-              blob: file,
-              toType: "image/jpeg",
-              quality: 0.8
-            });
-            if (Array.isArray(converted)) {
-              activeFile = converted[0];
-            } else {
-              activeFile = converted;
-            }
-          } catch (convErr: any) {
-            console.warn("Client side HEIC converter failed, attempt uploading directly as-is:", convErr);
-          }
-        }
-
         setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -202,7 +182,10 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         });
 
         const base64Data = dataUrl.split(',')[1];
-        const mimeType = activeFile.type || 'image/jpeg';
+        let mimeType = activeFile.type || 'image/jpeg';
+        if (fileName.endsWith('.heic') || fileName.endsWith('.heif')) {
+          mimeType = 'image/heic';
+        }
         
         const res = await fetch('/api/scan-receipt', {
           method: 'POST',

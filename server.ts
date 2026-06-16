@@ -128,15 +128,17 @@ app.post("/api/parse-recipe", async (req, res) => {
   }
 });
 
-app.post("/api/scan-food", upload.single('file'), async (req, res) => {
+app.post("/api/scan-food", upload.any(), async (req, res) => {
   try {
     let base64Data: string | undefined;
     let mimeType: string | undefined;
 
-    if (req.file) {
-      base64Data = req.file.buffer.toString("base64");
-      mimeType = req.file.mimetype;
-      const ext = path.extname(req.file.originalname || "").toLowerCase();
+    const reqFile = req.file || (req.files && Array.isArray(req.files) ? req.files[0] : undefined);
+
+    if (reqFile) {
+      base64Data = reqFile.buffer.toString("base64");
+      mimeType = reqFile.mimetype;
+      const ext = path.extname(reqFile.originalname || "").toLowerCase();
       if (ext === ".heic" || ext === ".heif") {
         mimeType = "image/heic";
       } else if (mimeType === "application/octet-stream" || !mimeType) {
@@ -200,16 +202,18 @@ Provide structured JSON.`;
   }
 });
 
-app.post("/api/scan-receipt", upload.single('file'), async (req, res) => {
+app.post(["/api/scan-receipt", "/api/parse-receipt"], upload.any(), async (req, res) => {
   try {
     let base64Data: string | undefined;
     let mimeType: string | undefined;
 
+    const reqFile = req.file || (req.files && Array.isArray(req.files) ? req.files[0] : undefined);
+
     // Check if uploaded via form-data or JSON base64
-    if (req.file) {
-      base64Data = req.file.buffer.toString("base64");
-      mimeType = req.file.mimetype;
-      const ext = path.extname(req.file.originalname || "").toLowerCase();
+    if (reqFile) {
+      base64Data = reqFile.buffer.toString("base64");
+      mimeType = reqFile.mimetype;
+      const ext = path.extname(reqFile.originalname || "").toLowerCase();
       if (ext === ".heic" || ext === ".heif") {
         mimeType = "image/heic";
       } else if (mimeType === "application/octet-stream" || !mimeType) {

@@ -48,6 +48,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [remainingScans, setRemainingScans] = useState<number>(2);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [scanMode, setScanMode] = useState<'ingredient' | 'receipt'>('ingredient');
   
   // Tab selector: 'camera' | 'album'
   const [scanTab, setScanTab] = useState<'camera' | 'album'>(() => {
@@ -146,27 +147,28 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   const processImageFile = async (file: File) => {
     try {
       setIsScanning(true);
-      setScanStatus("Uploading your receipt... ⏳");
+      setScanStatus(scanMode === 'ingredient' ? "Identifying food ingredient... ⏳" : "Uploading your receipt... ⏳");
       setScanError(null);
       setDetectedItems([]);
       const userId = auth.currentUser?.uid || '';
       const remaining = await getRemainingScans(userId);
       if (remaining <= 0) {
-        throw new Error("You have reached your daily limit of 2 receipt scans.");
+        throw new Error("You have reached your daily limit of 2 scans.");
       }
 
       let activeFile: Blob = file;
       const fileName = file.name ? file.name.toLowerCase() : '';
       let data: any;
       let usedMultipart = false;
+      const endpoint = scanMode === 'ingredient' ? '/api/scan-food' : '/api/scan-receipt';
 
       // 1. Primary Attempt: Direct Multi-part Form Data Upload (extremely fast & native browser stream)
       try {
-        setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
+        setScanStatus(scanMode === 'ingredient' ? "Identifying food ingredient with Gemini AI... ⏳" : "Parsing receipt lines with Gemini AI... ⏳");
         const formData = new FormData();
         formData.append('file', file, file.name);
 
-        const res = await fetch('/api/scan-receipt', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           body: formData
         });
@@ -183,7 +185,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
       // 2. Secondary Fallback Attempt: Base64 JSON POST (bypass heic2any to prevent iOS DOMExceptions)
       if (!usedMultipart) {
-        setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
+        setScanStatus(scanMode === 'ingredient' ? "Identifying food ingredient with Gemini AI... ⏳" : "Parsing receipt lines with Gemini AI... ⏳");
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
@@ -197,7 +199,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           mimeType = 'image/heic';
         }
         
-        const res = await fetch('/api/scan-receipt', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -208,7 +210,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
         if (!res.ok) {
           const errJson = await res.json();
-          throw new Error(errJson.error || "Failed to scan receipt image.");
+          throw new Error(errJson.error || `Failed to scan ${scanMode === 'ingredient' ? 'food' : 'receipt'}.`);
         }
 
         data = await res.json();
@@ -216,48 +218,68 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
-      const storeName = data.storeName || "Unknown Store";
-      const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
-      if (data.items && Array.isArray(data.items)) {
-        const items = data.items.map((item: any, idx: number) => {
-          const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
-          const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
-          const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
-          
-          let finalPrice = '';
-          if (item.price !== undefined && item.price !== null) {
-            let pStr = String(item.price).trim();
-            let isNegative = pStr.includes('-');
-            pStr = pStr.replace(/[^0-9.]/g, '');
-            let numParsed = parseFloat(pStr);
-            if (!isNaN(numParsed)) {
-              if (isNegative) numParsed = -numParsed;
-              finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+      if (scanMode === 'ingredient') {
+        const item = data || {};
+        const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
+        const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
+        const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
+        const resultItems = [{
+          id: 'scanned-0-' + Math.random().toString(36).substring(7),
+          name: typeof item.name === 'string' ? item.name : 'Unknown Ingredient',
+          price: '$0.00',
+          category: typeof item.category === 'string' ? item.category : 'Pantry',
+          quantity: '1',
+          expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+          storeName: 'Self-captured',
+          purchaseDate: format(new Date(), 'yyyy-MM-dd')
+        }];
+        setDetectedItems(resultItems);
+        setScanError(null);
+      } else {
+        const storeName = data.storeName || "Unknown Store";
+        const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
+
+        if (data.items && Array.isArray(data.items)) {
+          const items = data.items.map((item: any, idx: number) => {
+            const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
+            const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
+            const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
+            
+            let finalPrice = '';
+            if (item.price !== undefined && item.price !== null) {
+              let pStr = String(item.price).trim();
+              let isNegative = pStr.includes('-');
+              pStr = pStr.replace(/[^0-9.]/g, '');
+              let numParsed = parseFloat(pStr);
+              if (!isNaN(numParsed)) {
+                if (isNegative) numParsed = -numParsed;
+                finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+              }
             }
-          }
-          return {
-            id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
-            name: typeof item.name === 'string' ? item.name : 'Unknown Item',
-            price: finalPrice || '$0.00',
-            category: typeof item.category === 'string' ? item.category : 'Pantry',
-            quantity: typeof item.quantity === 'string' ? item.quantity : '1',
-            expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
-            storeName,
-            purchaseDate
-          };
-        });
+            return {
+              id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
+              name: typeof item.name === 'string' ? item.name : 'Unknown Item',
+              price: finalPrice || '$0.00',
+              category: typeof item.category === 'string' ? item.category : 'Pantry',
+              quantity: typeof item.quantity === 'string' ? item.quantity : '1',
+              expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+              storeName,
+              purchaseDate
+            };
+          });
 
-        if (items.length > 0) {
-          setDetectedItems(items);
-          setScanError(null);
+          if (items.length > 0) {
+            setDetectedItems(items);
+            setScanError(null);
+          } else {
+            setDetectedItems([]);
+            setScanError("No valid ingredients detected on the receipt. Please try another snapshot.");
+          }
         } else {
           setDetectedItems([]);
-          setScanError("No valid ingredients detected on the receipt. Please try another snapshot.");
+          setScanError("Could not parse items from the receipt. Please confirm the photo is clear.");
         }
-      } else {
-        setDetectedItems([]);
-        setScanError("Could not parse items from the receipt. Please confirm the photo is clear.");
       }
     } catch (err: any) {
       console.warn("File selection/validation error:", err.message);
@@ -278,7 +300,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const userId = auth.currentUser?.uid || '';
       const remaining = await getRemainingScans(userId);
       if (remaining <= 0) {
-        throw new Error("You have reached your daily limit of 2 receipt scans.");
+        throw new Error("You have reached your daily limit of 2 scans.");
       }
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth || 640;
@@ -289,8 +311,9 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const dataUrl = canvas.toDataURL('image/jpeg');
       const base64Data = dataUrl.split(',')[1];
       
-      setScanStatus("Parsing receipt lines with Gemini... ⏳");
-      const res = await fetch('/api/scan-receipt', {
+      setScanStatus(scanMode === 'ingredient' ? "Identifying food ingredient with Gemini AI... ⏳" : "Parsing receipt lines with Gemini... ⏳");
+      const endpoint = scanMode === 'ingredient' ? '/api/scan-food' : '/api/scan-receipt';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -301,53 +324,73 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
 
       if (!res.ok) {
         const errJson = await res.json();
-        throw new Error(errJson.error || "Failed to scan camera snapshot.");
+        throw new Error(errJson.error || `Failed to scan ${scanMode === 'ingredient' ? 'food' : 'receipt'}.`);
       }
       const data = await res.json();
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
-      const storeName = data.storeName || "Unknown Store";
-      const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
 
-      if (data.items && Array.isArray(data.items)) {
-        const items = data.items.map((item: any, idx: number) => {
-          const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
-          const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
-          const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
-          
-          let finalPrice = '';
-          if (item.price !== undefined && item.price !== null) {
-            let pStr = String(item.price).trim();
-            let isNegative = pStr.includes('-');
-            pStr = pStr.replace(/[^0-9.]/g, '');
-            let numParsed = parseFloat(pStr);
-            if (!isNaN(numParsed)) {
-              if (isNegative) numParsed = -numParsed;
-              finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+      if (scanMode === 'ingredient') {
+        const item = data || {};
+        const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
+        const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
+        const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
+        const resultItems = [{
+          id: 'scanned-0-' + Math.random().toString(36).substring(7),
+          name: typeof item.name === 'string' ? item.name : 'Unknown Ingredient',
+          price: '$0.00',
+          category: typeof item.category === 'string' ? item.category : 'Pantry',
+          quantity: '1',
+          expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+          storeName: 'Self-captured',
+          purchaseDate: format(new Date(), 'yyyy-MM-dd')
+        }];
+        setDetectedItems(resultItems);
+        setScanError(null);
+      } else {
+        const storeName = data.storeName || "Unknown Store";
+        const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
+
+        if (data.items && Array.isArray(data.items)) {
+          const items = data.items.map((item: any, idx: number) => {
+            const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
+            const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
+            const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
+            
+            let finalPrice = '';
+            if (item.price !== undefined && item.price !== null) {
+              let pStr = String(item.price).trim();
+              let isNegative = pStr.includes('-');
+              pStr = pStr.replace(/[^0-9.]/g, '');
+              let numParsed = parseFloat(pStr);
+              if (!isNaN(numParsed)) {
+                if (isNegative) numParsed = -numParsed;
+                finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
+              }
             }
+            return {
+              id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
+              name: typeof item.name === 'string' ? item.name : 'Unknown Item',
+              price: finalPrice || '$0.00',
+              category: typeof item.category === 'string' ? item.category : 'Pantry',
+              quantity: typeof item.quantity === 'string' ? item.quantity : '1',
+              expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
+              storeName,
+              purchaseDate
+            };
+          });
+          
+          if (items.length > 0) {
+            setDetectedItems(items);
+            setScanError(null);
+          } else {
+            setDetectedItems([]);
+            setScanError("No valid ingredients detected. Please ensure the lens has sufficient lighting.");
           }
-          return {
-            id: 'scanned-' + idx + '-' + Math.random().toString(36).substring(7),
-            name: typeof item.name === 'string' ? item.name : 'Unknown Item',
-            price: finalPrice || '$0.00',
-            category: typeof item.category === 'string' ? item.category : 'Pantry',
-            quantity: typeof item.quantity === 'string' ? item.quantity : '1',
-            expiryDate: format(addDays(new Date(), shelfLife), 'yyyy-MM-dd'),
-            storeName,
-            purchaseDate
-          };
-        });
-        
-        if (items.length > 0) {
-          setDetectedItems(items);
-          setScanError(null);
         } else {
           setDetectedItems([]);
-          setScanError("No valid ingredients detected. Please ensure the lens has sufficient lighting.");
+          setScanError("Failed to parse items. Please retry.");
         }
-      } else {
-        setDetectedItems([]);
-        setScanError("Failed to parse items. Please retry.");
       }
     } catch (err: any) {
       console.warn("Camera capture error:", err.message);
@@ -371,20 +414,9 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
   };
 
   const triggerImagePicker = () => {
-    try {
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.onchange = (e: any) => {
-        const file = e.target?.files?.[0];
-        if (file) {
-          processImageFile(file);
-        }
-      };
-      fileInput.click();
-    } catch (err: any) {
-      console.warn("Dynamic file input trigger failed:", err);
-      fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
     }
   };
 
@@ -472,7 +504,9 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               <ArrowLeft className="w-4 h-4 text-[#18181b]" />
             </button>
             <div>
-              <h2 className="text-3xl font-light tracking-tight text-[#18181b] mb-1">Scan Receipt</h2>
+              <h2 className="text-3xl font-light tracking-tight text-[#18181b] mb-1">
+                {scanMode === 'ingredient' ? 'Identify Food' : 'Scan Receipt'}
+              </h2>
               <p className="text-zinc-500 text-xs font-semibold uppercase tracking-widest">
                 {isScanning ? 'AI reading with Gemini 2.5 Flash' : 'Instant Groceries Check'}
               </p>
@@ -486,7 +520,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               }}
               disabled={isScanning || remainingScans <= 0}
               className="w-10 h-10 bg-white hover:bg-zinc-100 rounded-full flex items-center justify-center border border-zinc-200 shadow-sm transition-all disabled:opacity-30 cursor-pointer"
-              title={remainingScans <= 0 ? 'Daily Limit Reached' : 'Upload another receipt photo'}
+              title={remainingScans <= 0 ? 'Daily Limit Reached' : scanMode === 'ingredient' ? 'Upload another food photo' : 'Upload another receipt photo'}
             >
               <Upload className="w-5 h-5 text-[#18181b]" />
             </button>
@@ -504,6 +538,48 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           <span className="px-3 py-1 bg-zinc-200/60 backdrop-blur-md rounded-full text-[9px] font-extrabold uppercase tracking-[0.14em] text-zinc-650 border border-zinc-300/40 shadow-sm">
             REMAINING SCANS: {remainingScans} TODAY
           </span>
+        </div>
+
+        {/* Scan Mode Switcher (Identify Food / Scan Receipt) */}
+        <div className="flex gap-2 p-1.5 bg-zinc-200/40 backdrop-blur-md rounded-2xl border border-zinc-300/20 mb-4 max-w-md self-start shadow-sm">
+          <button
+            onClick={() => {
+              if (isScanning) return;
+              setScanMode('ingredient');
+              setDetectedItems([]);
+              setScanError(null);
+            }}
+            disabled={isScanning}
+            className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all flex flex-col items-start gap-0.5 cursor-pointer disabled:opacity-50 ${
+              scanMode === 'ingredient'
+                ? 'bg-rose-500 text-white shadow-md'
+                : 'text-zinc-500 hover:text-zinc-800'
+            }`}
+          >
+            <span className="font-extrabold text-[10px] tracking-wide">Identify Food</span>
+            <span className={`text-[8.5px] opacity-80 font-sans normal-case text-left ${scanMode === 'ingredient' ? 'text-zinc-100' : 'text-zinc-400'}`}>
+              Snap single ingredients directly
+            </span>
+          </button>
+          <button
+            onClick={() => {
+              if (isScanning) return;
+              setScanMode('receipt');
+              setDetectedItems([]);
+              setScanError(null);
+            }}
+            disabled={isScanning}
+            className={`px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all flex flex-col items-start gap-0.5 cursor-pointer disabled:opacity-50 ${
+              scanMode === 'receipt'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-zinc-500 hover:text-zinc-800'
+            }`}
+          >
+            <span className="font-extrabold text-[10px] tracking-wide">Scan Receipt</span>
+            <span className={`text-[8.5px] opacity-80 font-sans normal-case text-left ${scanMode === 'receipt' ? 'text-zinc-100' : 'text-zinc-400'}`}>
+              Extract multiple purchased items
+            </span>
+          </button>
         </div>
 
         {/* Unified switcher tab headers */}
@@ -571,9 +647,14 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               <Upload className="w-8 h-8 text-[#18181b]" />
             </div>
             <div className="space-y-2 max-w-sm mb-6">
-              <p className="text-[#18181b] text-base font-semibold">Choose Receipt Photo</p>
+              <p className="text-[#18181b] text-base font-semibold">
+                {scanMode === 'ingredient' ? 'Choose Food Photo' : 'Choose Receipt Photo'}
+              </p>
               <p className="text-zinc-500 text-xs leading-relaxed">
-                Supports Standard Camera images, JPEGs, PNGs, and iOS album .HEIC files. Daily limit applies.
+                {scanMode === 'ingredient' 
+                  ? 'Supports snapping boxes/packets of meat, fish, fresh produce, milk, eggs ect. We auto-expiry track them!'
+                  : 'Supports Standard Camera images, JPEGs, PNGs, and iOS album .HEIC files. Daily limit applies.'
+                }
               </p>
             </div>
             <button 
@@ -584,7 +665,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
               disabled={remainingScans <= 0 || isScanning}
               className="px-6 py-3 bg-[#18181b] hover:bg-zinc-800 text-white rounded-2xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md disabled:opacity-50 cursor-pointer"
             >
-              Choose receipt photo
+              {scanMode === 'ingredient' ? 'Choose food photo' : 'Choose receipt photo'}
             </button>
           </div>
         )}
@@ -647,7 +728,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
                 className="w-full bg-[#18181b] hover:bg-zinc-805 text-white py-4 rounded-2xl font-bold uppercase tracking-[0.14em] text-[10px] shadow-md transition-all disabled:opacity-45 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Camera className="w-4 h-4" />
-                {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : 'Capture Receipt Photo'}
+                {remainingScans <= 0 ? 'Daily Limit Reached (2/2)' : scanMode === 'ingredient' ? 'Capture Food Photo' : 'Capture Receipt Photo'}
               </button>
             )}
             
@@ -821,6 +902,14 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           </div>
         )}
       </AnimatePresence>
+      {/* Hidden File Input for Album Photo Upload */}
+      <input 
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
     </motion.div>
   );
 }

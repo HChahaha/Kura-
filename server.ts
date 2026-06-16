@@ -8,6 +8,11 @@ dotenv.config();
 
 const app = express();
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
+});
+
 function safeParseJson(text: string): any {
   if (!text) return {};
   let cleanText = text;
@@ -123,16 +128,39 @@ app.post("/api/parse-recipe", async (req, res) => {
   }
 });
 
-app.post("/api/scan-food", async (req, res) => {
+app.post("/api/scan-food", upload.single('file'), async (req, res) => {
   try {
-    const { imageData, mimeType } = req.body;
-    
+    let base64Data: string | undefined;
+    let mimeType: string | undefined;
+
+    if (req.file) {
+      base64Data = req.file.buffer.toString("base64");
+      mimeType = req.file.mimetype;
+      const ext = path.extname(req.file.originalname || "").toLowerCase();
+      if (ext === ".heic" || ext === ".heif") {
+        mimeType = "image/heic";
+      } else if (mimeType === "application/octet-stream" || !mimeType) {
+        if (ext === ".png") mimeType = "image/png";
+        else if (ext === ".webp") mimeType = "image/webp";
+        else if (ext === ".heic" || ext === ".heif") mimeType = "image/heic";
+        else mimeType = "image/jpeg";
+      }
+    } else if (req.body && req.body.imageData) {
+      base64Data = req.body.imageData;
+      mimeType = req.body.mimeType || "image/jpeg";
+    }
+
+    const supportedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+    if (!mimeType || !supportedMimeTypes.includes(mimeType)) {
+      mimeType = "image/jpeg";
+    }
+
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Gemini API key is missing." });
     }
 
-    if (!imageData || !mimeType) {
-      return res.status(400).json({ error: "Missing image data." });
+    if (!base64Data) {
+      return res.status(400).json({ error: "Missing image data or file." });
     }
 
     const ai = new GoogleGenAI({ 
@@ -140,9 +168,13 @@ app.post("/api/scan-food", async (req, res) => {
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
     });
 
+    const promptText = `Identify the single main food item or raw ingredient shown in this image. 
+Return its name (prefer a user-friendly, descriptive noun in English. If the packaging labels or food is clearly identifiable, write its title, e.g. "Beef Ribeye" or "Sliced Salmon") and the best matching category from this list: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household.
+Provide structured JSON.`;
+
     const parts = [
-      { text: "Identify the single main food item or ingredient in this image. Return its name (in English or the same language as marked on packaging if clear) and the best matching category from this list: Meat & Seafood, Produce, Dairy & Eggs, Bakery, Pantry, Snacks, Beverages, Frozen Food. Return structured JSON." },
-      { inlineData: { data: imageData, mimeType: mimeType } }
+      { text: promptText },
+      { inlineData: { data: base64Data, mimeType: mimeType } }
     ];
 
     const response = await ai.models.generateContent({
@@ -155,20 +187,17 @@ app.post("/api/scan-food", async (req, res) => {
           properties: {
              name: { type: Type.STRING, description: "Identified food generic name or product name" },
              category: { type: Type.STRING, description: "Category of the food item" }
-          }
+          },
+          required: ["name", "category"]
         }
       }
     });
 
     res.json(safeParseJson(response.text || "{}"));
   } catch (error: any) {
+    console.error("Gemini Scan Food Error:", error);
     res.status(500).json({ error: error.message || "Failed to scan food" });
   }
-});
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
 });
 
 app.post("/api/scan-receipt", upload.single('file'), async (req, res) => {

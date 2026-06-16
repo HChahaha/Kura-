@@ -218,11 +218,17 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
 
-      const storeName = data.storeName || "Unknown Store";
-      const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
+      if (data && data.success === false) {
+        throw new Error(data.error || "Gracious fallback from backend.");
+      }
 
-      if (data.items && Array.isArray(data.items)) {
-        const items = data.items.map((item: any, idx: number) => {
+      const actualData = (data && data.success === true && data.data) ? data.data : data;
+
+      const storeName = actualData.storeName || "Unknown Store";
+      const purchaseDate = actualData.date || format(new Date(), 'yyyy-MM-dd');
+
+      if (actualData.items && Array.isArray(actualData.items)) {
+        const items = actualData.items.map((item: any, idx: number) => {
           const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
           const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
           const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
@@ -231,8 +237,14 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           if (item.price !== undefined && item.price !== null) {
             let pStr = String(item.price).trim();
             let isNegative = pStr.includes('-');
-            pStr = pStr.replace(/[^0-9.]/g, '');
-            let numParsed = parseFloat(pStr);
+            let cleanStr = '';
+            for (let i = 0; i < pStr.length; i++) {
+              const char = pStr[i];
+              if ((char >= '0' && char <= '9') || char === '.') {
+                cleanStr += char;
+              }
+            }
+            let numParsed = parseFloat(cleanStr);
             if (!isNaN(numParsed)) {
               if (isNegative) numParsed = -numParsed;
               finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);
@@ -310,11 +322,17 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
       const newRemaining = await incrementScans(userId);
       setRemainingScans(newRemaining);
 
-      const storeName = data.storeName || "Unknown Store";
-      const purchaseDate = data.date || format(new Date(), 'yyyy-MM-dd');
+      if (data && data.success === false) {
+        throw new Error(data.error || "Gracious fallback from backend.");
+      }
 
-      if (data.items && Array.isArray(data.items)) {
-        const items = data.items.map((item: any, idx: number) => {
+      const actualData = (data && data.success === true && data.data) ? data.data : data;
+
+      const storeName = actualData.storeName || "Unknown Store";
+      const purchaseDate = actualData.date || format(new Date(), 'yyyy-MM-dd');
+
+      if (actualData.items && Array.isArray(actualData.items)) {
+        const items = actualData.items.map((item: any, idx: number) => {
           const upperName = typeof item.name === 'string' ? item.name.toUpperCase() : '';
           const matchedShelfKey = Object.keys(FOOD_SHELF_LIFE).find(k => upperName.includes(k)) || '';
           const shelfLife = FOOD_SHELF_LIFE[matchedShelfKey] || 7;
@@ -323,8 +341,14 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           if (item.price !== undefined && item.price !== null) {
             let pStr = String(item.price).trim();
             let isNegative = pStr.includes('-');
-            pStr = pStr.replace(/[^0-9.]/g, '');
-            let numParsed = parseFloat(pStr);
+            let cleanStr = '';
+            for (let i = 0; i < pStr.length; i++) {
+              const char = pStr[i];
+              if ((char >= '0' && char <= '9') || char === '.') {
+                cleanStr += char;
+              }
+            }
+            let numParsed = parseFloat(cleanStr);
             if (!isNaN(numParsed)) {
               if (isNegative) numParsed = -numParsed;
               finalPrice = (numParsed < 0 ? '-' : '') + '$' + Math.abs(numParsed).toFixed(2);

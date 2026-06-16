@@ -143,9 +143,7 @@ export function BottomNav({ currentView, onViewChange }: NavigationProps) {
 
  return (
  <nav className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg z-50 transition-colors duration-500 ${
- isScanner 
- ? 'bg-black/20 backdrop-blur-md border-t border-white/10' 
- : 'bg-white/70 backdrop-blur-xl border-t border-zinc-100'
+ 'bg-white/70 backdrop-blur-xl border-t border-zinc-200/50'
  } h-20 pb-safe`}>
  <div className="flex justify-around items-center h-full max-w-lg mx-auto">
  {navItems.map((item) => {
@@ -156,9 +154,7 @@ export function BottomNav({ currentView, onViewChange }: NavigationProps) {
  key={item.id}
  onClick={() => onViewChange(item.id as View)}
  className={`flex flex-col items-center justify-center gap-1 transition-all ${
- isScanner 
- ? (isActive ? 'text-white' : 'text-white/40 hover:text-white/60')
- : (isActive ? 'text-ink-black' : 'text-zinc-400 hover:text-zinc-600')
+ isActive ? 'text-ink-black font-semibold' : 'text-zinc-400 hover:text-zinc-650'
  }`}
  >
  <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />

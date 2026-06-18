@@ -1,0 +1,407 @@
+import express from "express";
+import path from "path";
+import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+import multer from "multer";
+
+dotenv.config();
+
+const app = express();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
+});
+
+function safeParseJson(text: string): any {
+  if (!text) return {};
+  let cleanText = text;
+  // Strip markdown formatting if Gemini wrapped the response
+  cleanText = cleanText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  
+  // Find the first { and last } to ensure we only parse the JSON object
+  const startIndex = cleanText.indexOf('{');
+  const endIndex = cleanText.lastIndexOf('}');
+  if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+    cleanText = cleanText.substring(startIndex, endIndex + 1);
+  }
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (e: any) {
+    console.error("JSON parse failed. Raw text length: " + text.length + ". Error: " + e.message);
+    throw new Error("AI response was cut off or contained invalid formatting. Please try again with shorter content or wait a moment.");
+  }
+}
+
+app.use(express.json({ limit: "50mb" }));
+
+app.post("/api/parse-recipe", async (req, res) => {
+  try {
+    const { url, imageData, mimeType } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing. Please set it in Settings > Secrets." });
+    }
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+
+    const parts = [];
+    if (url) {
+      parts.push({ text: `Extract the recipe title, ingredients with exact amounts/quantities, and step-by-step instructions from this URL or text:\n\n${url}\n\nIf it's a URL and you can access it, use its contents. Otherwise, attempt to extract based on the text. Return structured JSON.` });
+    } else if (imageData && mimeType) {
+      parts.push({ text: "Extract the recipe title, ingredients with exact amounts/quantities it shows, and step-by-step instructions from this image. Return structured JSON." });
+      parts.push({
+        inlineData: {
+          data: imageData,
+          mimeType: mimeType,
+        },
+      });
+    } else {
+      return res.status(400).json({ error: "Missing url or image data." });
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: {
+              type: Type.STRING,
+              description: "The name or title of the recipe."
+            },
+            ingredients: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Name of the ingredient" },
+                  quantity: { type: Type.STRING, description: "Amount or quantity (e.g., '1 cup', '200g')" }
+                },
+              },
+              description: "The list of ingredients for the recipe."
+            },
+            instructions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.STRING
+              },
+              description: "The step-by-step cooking instructions."
+            },
+            time: {
+              type: Type.STRING,
+              description: "Estimated total cooking or preparation time (e.g., '30 mins'). Leave empty if not available."
+            },
+            difficulty: {
+              type: Type.STRING,
+              description: "Estimated difficulty (e.g., 'Easy', 'Medium', 'Hard')."
+            },
+            calories: {
+              type: Type.NUMBER,
+              description: "Estimated calories per serving if available."
+            },
+            servings: {
+              type: Type.NUMBER,
+              description: "Number of servings the recipe yields."
+            }
+          }
+        },
+      }
+    });
+
+    res.json(safeParseJson(response.text || "{}"));
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    res.status(500).json({ error: error.message || "Failed to parse recipe" });
+  }
+});
+
+app.post("/api/scan-food", upload.any(), async (req, res) => {
+  try {
+    let base64Data: string | undefined;
+    let mimeType: string | undefined;
+
+    const reqFile = req.file || (req.files && Array.isArray(req.files) ? req.files[0] : undefined);
+
+    if (reqFile) {
+      base64Data = reqFile.buffer.toString("base64");
+      mimeType = reqFile.mimetype;
+      const ext = path.extname(reqFile.originalname || "").toLowerCase();
+      if (ext === ".heic" || ext === ".heif") {
+        mimeType = "image/heic";
+      } else if (mimeType === "application/octet-stream" || !mimeType) {
+        if (ext === ".png") mimeType = "image/png";
+        else if (ext === ".webp") mimeType = "image/webp";
+        else if (ext === ".heic" || ext === ".heif") mimeType = "image/heic";
+        else mimeType = "image/jpeg";
+      }
+    } else if (req.body && req.body.imageData) {
+      base64Data = req.body.imageData;
+      mimeType = req.body.mimeType || "image/jpeg";
+    }
+
+    const supportedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+    if (!mimeType || !supportedMimeTypes.includes(mimeType)) {
+      mimeType = "image/jpeg";
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    if (!base64Data) {
+      return res.status(400).json({ error: "Missing image data or file." });
+    }
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const promptText = `Identify the single main food item or raw ingredient shown in this image. 
+Return its name (prefer a user-friendly, descriptive noun in English. If the packaging labels or food is clearly identifiable, write its title, e.g. "Beef Ribeye" or "Sliced Salmon") and the best matching category from this list: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household.
+Provide structured JSON.`;
+
+    const parts = [
+      { text: promptText },
+      { inlineData: { data: base64Data, mimeType: mimeType } }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+             name: { type: Type.STRING, description: "Identified food generic name or product name" },
+             category: { type: Type.STRING, description: "Category of the food item" }
+          },
+          required: ["name", "category"]
+        }
+      }
+    });
+
+    res.json(safeParseJson(response.text || "{}"));
+  } catch (error: any) {
+    console.error("Gemini Scan Food Error:", error);
+    res.status(500).json({ error: error.message || "Failed to scan food" });
+  }
+});
+
+app.post(["/api/scan-receipt", "/api/parse-receipt"], upload.any(), async (req, res) => {
+  try {
+    let base64Data: string | undefined;
+    let mimeType: string | undefined;
+
+    const reqFile = req.file || (req.files && Array.isArray(req.files) ? req.files[0] : undefined);
+
+    // Check if uploaded via form-data or JSON base64
+    if (reqFile) {
+      base64Data = reqFile.buffer.toString("base64");
+      mimeType = reqFile.mimetype;
+      const ext = path.extname(reqFile.originalname || "").toLowerCase();
+      if (ext === ".heic" || ext === ".heif") {
+        mimeType = "image/heic";
+      } else if (mimeType === "application/octet-stream" || !mimeType) {
+        if (ext === ".png") mimeType = "image/png";
+        else if (ext === ".webp") mimeType = "image/webp";
+        else if (ext === ".heic" || ext === ".heif") mimeType = "image/heic";
+        else mimeType = "image/jpeg";
+      }
+    } else if (req.body && req.body.imageData) {
+      base64Data = req.body.imageData;
+      mimeType = req.body.mimeType || "image/jpeg";
+    }
+
+    const supportedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+    if (!mimeType || !supportedMimeTypes.includes(mimeType)) {
+      mimeType = "image/jpeg";
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    if (!base64Data) {
+      return res.status(400).json({ error: "Missing image data or file." });
+    }
+
+    // 1. Pass the raw image directly to Gemini Vision WITHOUT any local regex parsing
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const promptText = `Analyze this grocery receipt image. Extract items into a structured list. Output STRICT JSON matching this schema:
+{
+  "storeName": "Store Name",
+  "date": "YYYY-MM-DD",
+  "items": [
+    {
+      "name": "Item Description",
+      "price": "Price paid (e.g. '3.99')",
+      "quantity": "Quantity or weight (e.g. '1')",
+      "category": "One of: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household"
+    }
+  ]
+}
+Do not fail or throw errors if strings are formatted weirdly or if details are missing. Just fallback gracefully.`;
+
+    const parts = [
+      { text: promptText },
+      { inlineData: { data: base64Data, mimeType: mimeType } }
+    ];
+
+    let geminiResponseText = "";
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: { parts },
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+      geminiResponseText = response.text || "{}";
+    } catch (visionErr: any) {
+      console.error("Gemini Vision model call crashed:", visionErr);
+      return res.json({
+        storeName: "Unknown Store",
+        date: new Date().toISOString().substring(0, 10),
+        items: []
+      });
+    }
+
+    // 2. Wrap JSON parsing in a separate safe block
+    let parsedData;
+    try {
+      parsedData = safeParseJson(geminiResponseText);
+    } catch (jsonErr) {
+      console.error("Gemini JSON parse failed, using fallback empty template", jsonErr);
+      parsedData = { 
+        storeName: "Retail Store", 
+        date: new Date().toISOString().substring(0, 10), 
+        items: [] 
+      };
+    }
+
+    return res.json(parsedData);
+
+  } catch (globalError: any) {
+    console.error("Critical Parse Crash:", globalError);
+    // FORCED FIX: Never throw standard string pattern errors to the frontend!
+    return res.json({ 
+      storeName: "Manual Entry Required", 
+      date: new Date().toISOString().substring(0, 10),
+      items: [],
+      error: "Parsing encountered an issue, but gracefully falling back."
+    });
+  }
+});
+
+app.post("/api/generate-recipe", async (req, res) => {
+  try {
+    const { inventory, ingredients } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key is missing." });
+    }
+
+    let primaryList: string[] = [];
+    let secondaryList: string[] = [];
+
+    if (Array.isArray(inventory) && inventory.length > 0) {
+      inventory.forEach((item: any) => {
+        const isExpiring = item.isExpiringSoon || (item.daysLeft !== undefined && item.daysLeft <= 2);
+        const qtyStr = item.quantity ? `: ${item.quantity}` : '';
+        const desc = `${item.name}${qtyStr}${isExpiring ? ' (EXPIRING SOON - MUST USE)' : ''}`;
+        
+        if (isExpiring) {
+          primaryList.push(desc);
+        } else {
+          secondaryList.push(desc);
+        }
+      });
+    }
+
+    // Fallback if no inventory passed but ingredients list is available
+    if (primaryList.length === 0 && secondaryList.length === 0 && Array.isArray(ingredients)) {
+      secondaryList = ingredients;
+    }
+
+    if (primaryList.length === 0 && secondaryList.length === 0) {
+      return res.status(400).json({ error: "No inventory items available to suggest recipes." });
+    }
+
+    const primaryStr = primaryList.length > 0 ? primaryList.join(", ") : "None specifically expiring soon";
+    const availableStr = secondaryList.length > 0 ? secondaryList.join(", ") : "None";
+
+    const ai = new GoogleGenAI({ 
+      apiKey: process.env.GEMINI_API_KEY,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+    });
+
+    const promptText = `You are an expert home cook. You MUST design ONE delicious, foolproof, simple home-cooked meal recipe based strictly around what the user CURRENTLY has in stock in their Kitchen Inventory.
+
+Kitchen Inventory:
+- PRIMARY INGREDIENTS (Expiring soon or priority items to clear): ${primaryStr}
+- OTHER AVAILABLE INGREDIENTS (In stock in cupboard/fridge): ${availableStr}
+
+Strict prompt instructions:
+1. You MUST prioritize using the PRIMARY INGREDIENTS as the absolute foundation of the recipe to help the user efficiently clear out their fridge before food goes bad.
+2. Minimize any external required ingredients to bare pantry staples only (like salt, pepper, oil, water).
+3. Do NOT suggest recipes requiring elaborate extra grocery items. Focus strictly on maximizing the use of what's provided above.
+
+Return the response strictly as a clean, minified JSON object matching this schema. do NOT include any markdown block formatting or introductory/conversational prose.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "Name/title of the recipe" },
+            ingredients: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Ingredient name string" },
+                  quantity: { type: Type.STRING, description: "Amount or quantity string" }
+                },
+                required: ["name", "quantity"]
+              },
+              description: "Distinct items and their exact quantities used in the recipe, prioritizing the provided inventory. Only add bare pantry staples (salt, water, oil, pepper) as secondary additions."
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING, description: "A simple ordered cooking step/action description" },
+              description: "Step-by-step preparation instructions"
+            }
+          },
+          required: ["title", "ingredients", "steps"]
+        }
+      }
+    });
+
+    res.json(safeParseJson(response.text || "{}"));
+  } catch (error: any) {
+    console.error("Recipe generation fail:", error);
+    res.status(500).json({ error: error.message || "Failed to generate recipe" });
+  }
+});
+
+export default app;

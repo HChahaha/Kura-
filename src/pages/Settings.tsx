@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, User, Bell, Shield, LogOut, ChevronRight, Globe, Moon, Check, Upload, Camera } from 'lucide-react';
+import { ArrowLeft, User, Bell, Shield, LogOut, ChevronRight, Globe, Moon, Check, Upload, Camera, Languages } from 'lucide-react';
 import { View } from '../types';
 import { auth } from '../lib/firebase';
 import { signOut, updateProfile } from 'firebase/auth';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SettingsProps {
  onViewChange: (view: View) => void;
  user: any;
 }
 
-type Section = 'main' | 'profile' | 'notifications' | 'privacy' | 'appearance' | 'location';
+type Section = 'main' | 'profile' | 'notifications' | 'privacy' | 'appearance' | 'location' | 'language';
 
 export default function Settings({ onViewChange, user }: SettingsProps) {
  const [activeSection, setActiveSection] = useState<Section>('main');
+ const { language, setLanguage } = useLanguage();
 
  // Profile State
  const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -100,6 +102,7 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
 
  const menuItems = [
  { id: 'profile', icon: User, label: 'Profile Settings', sub: 'Edit your name and avatar' },
+ { id: 'language', icon: Languages, label: 'Language / 語言', sub: language === 'zh-HK' ? '繁體中文 (香港)' : 'English' },
  { id: 'location', icon: Globe, label: 'Location & Region', sub: `${city || province}, ${country}` },
  { id: 'notifications', icon: Bell, label: 'Notifications', sub: 'Meal reminders and expiry alerts' },
  { id: 'privacy', icon: Shield, label: 'Privacy & Security', sub: 'Manage your data' },
@@ -448,6 +451,49 @@ export default function Settings({ onViewChange, user }: SettingsProps) {
  </div>
  </motion.div>
  )}
+  {/* LANGUAGE SECTION */}
+  {activeSection === 'language' && (
+  <motion.div
+  key="language"
+  initial={{ opacity: 0, x: 20 }}
+  animate={{ opacity: 1, x: 0 }}
+  exit={{ opacity: 0, x: 20 }}
+  >
+  <header className="mb-8 flex items-center gap-4">
+  <button 
+  onClick={() => setActiveSection('main')}
+  className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-500 hover:text-ink-black transition-colors border border-zinc-100"
+  >
+  <ArrowLeft className="w-5 h-5" />
+  </button>
+  <h1 className="text-2xl font-light tracking-tight">Language / 語言</h1>
+  </header>
+
+  <div className="space-y-4 mb-8">
+  <p className="text-xs text-zinc-500 mb-4 px-2">Choose your preferred application language.</p>
+  
+  <div 
+  onClick={() => setLanguage('en')}
+  className={`w-full p-5 bg-white border border-zinc-100 rounded-2xl flex items-center justify-between hover:border-zinc-200 transition-colors cursor-pointer ${language === 'en' ? 'ring-1 ring-ink-black' : ''}`}
+  >
+  <span className="font-medium text-ink-black">English</span>
+  {language === 'en' && <Check className="w-5 h-5 text-ink-black" />}
+  </div>
+
+  <div 
+  onClick={() => setLanguage('zh-HK')}
+  className={`w-full p-5 bg-white border border-zinc-100 rounded-2xl flex items-center justify-between hover:border-zinc-200 transition-colors cursor-pointer ${language === 'zh-HK' ? 'ring-1 ring-ink-black' : ''}`}
+  >
+  <div>
+  <span className="font-medium text-ink-black block">繁體中文 (香港)</span>
+  <span className="text-[10px] text-zinc-400 font-medium mt-1 block">Traditional Chinese (Hong Kong)</span>
+  </div>
+  {language === 'zh-HK' && <Check className="w-5 h-5 text-ink-black" />}
+  </div>
+
+  </div>
+  </motion.div>
+  )}
  </AnimatePresence>
  </div>
  );

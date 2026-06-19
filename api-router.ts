@@ -244,6 +244,11 @@ app.post(["/api/scan-receipt", "/api/parse-receipt"], upload.any(), async (req, 
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
     });
 
+    const language = req.body?.language || "en";
+    const additionalTranslationPrompt = language === 'zh-HK' 
+      ? "\nImportant: Translate the extracted item names ('name' field) and store name into Traditional Chinese (Hong Kong style / Cantonese terminology) keeping the original numbers/quantities intact. Ensure local grocery slips and global items are parsed to local naming."
+      : "";
+
     const promptText = `Analyze this grocery receipt image. Extract items into a structured list. Output STRICT JSON matching this schema:
 {
   "storeName": "Store Name",
@@ -252,11 +257,11 @@ app.post(["/api/scan-receipt", "/api/parse-receipt"], upload.any(), async (req, 
     {
       "name": "Item Description",
       "price": "Price paid (e.g. '3.99')",
-      "quantity": "Quantity or weight (e.g. '1')",
+      "quantity": "Item quantity count or weight (e.g. '1', '2', '450g', '1 lb', '500ml')",
       "category": "One of: Dairy & Eggs, Vegetables, Meat & Seafood, Pantry, Grains, Fruits, Bakery, Frozen, Household"
     }
   ]
-}
+}${additionalTranslationPrompt}
 Do not fail or throw errors if strings are formatted weirdly or if details are missing. Just fallback gracefully.`;
 
     const parts = [
@@ -312,7 +317,7 @@ Do not fail or throw errors if strings are formatted weirdly or if details are m
 
 app.post("/api/generate-recipe", async (req, res) => {
   try {
-    const { inventory, ingredients } = req.body;
+    const { inventory, ingredients, language } = req.body;
     
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: "Gemini API key is missing." });
@@ -362,6 +367,7 @@ Strict prompt instructions:
 1. You MUST prioritize using the PRIMARY INGREDIENTS as the absolute foundation of the recipe to help the user efficiently clear out their fridge before food goes bad.
 2. Minimize any external required ingredients to bare pantry staples only (like salt, pepper, oil, water).
 3. Do NOT suggest recipes requiring elaborate extra grocery items. Focus strictly on maximizing the use of what's provided above.
+${language === 'zh-HK' ? "\n4. You must output the recipe title, ingredients, and steps in casual, natural Hong Kong Traditional Chinese / Cantonese written style. Use common Hong Kong kitchen terminology (e.g., use '薯仔' instead of '馬鈴薯', '番茄' instead of '西紅柿', '芝士' instead of '奶酪', '忌廉' instead of '奶油'). Keep the tone helpful, witty, and lifestyle-focused." : ""}
 
 Return the response strictly as a clean, minified JSON object matching this schema. do NOT include any markdown block formatting or introductory/conversational prose.`;
 

@@ -20,8 +20,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 export default function App() {
- const [currentView, setCurrentView] = useState<View>('inventory');
- const [viewHistory, setViewHistory] = useState<View[]>(['inventory']);
+ const [currentView, setCurrentView] = useState<View>('shopping');
+ const [viewHistory, setViewHistory] = useState<View[]>(['shopping']);
  const [historyIndex, setHistoryIndex] = useState(0);
 
  const handleViewChange = (newView: View) => {
@@ -97,6 +97,9 @@ export default function App() {
  storeName: newItem.storeName || '',
  price: newItem.price || '',
  checked: newItem.checked || false,
+ amount: newItem.amount || '',
+ quantityBought: newItem.quantityBought || '',
+ purchaseDate: newItem.purchaseDate || '',
  userId: user.uid,
  createdAt: serverTimestamp(),
  updatedAt: serverTimestamp()
@@ -322,7 +325,7 @@ export default function App() {
  }
  };
 
- const handleScanItems = async (items: { name: string; quantity: string; category: string; expiryDate: string }[]) => {
+ const handleScanItems = async (items: { name: string; quantity: string; category: string; expiryDate: string; price?: string; storeName?: string; purchaseDate?: string }[]) => {
  if (!user) return;
  
  for (const item of items) {

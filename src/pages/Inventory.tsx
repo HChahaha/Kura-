@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, Clock, Plus, Trash2, Check, CheckCircle2, Search, ArrowRight, BookOpen, Smile, Info, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Camera, Receipt, CheckSquare } from 'lucide-react';
 import { InventoryItem, View, PurchaseRecord } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface InventoryProps {
  inventory: InventoryItem[];
@@ -38,6 +39,7 @@ export default function Inventory({
  onAddPurchaseRecord,
  onConsumeItem
 }: InventoryProps) {
+ const { t } = useLanguage();
  const [selectedCategory, setSelectedCategory] = useState('All Items');
  const [inventorySearchQuery, setInventorySearchQuery] = useState('');
  const [consumedItemToPrompt, setConsumedItemToPrompt] = useState<{id: string, name: string} | null>(null);
@@ -157,7 +159,7 @@ export default function Inventory({
  <header className="mb-8 flex flex-col gap-4">
  <div>
  <span className="text-[11px] font-medium text-zinc-500 block mb-1">Your kitchen shelf</span>
- <h2 className="text-4xl font-semibold tracking-tight text-ink-black select-none">My Inventory</h2>
+ <h2 className="text-4xl font-semibold tracking-tight text-ink-black select-none">{t('Kitchen Inventory')}</h2>
  <p className="text-zinc-500 text-sm mt-1">
  {inventory.length} items in stock
  </p>

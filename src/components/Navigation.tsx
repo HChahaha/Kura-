@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LayoutGrid, BookOpen, Settings, Camera, Plus, ReceiptText, ShoppingBag, Bell, Calendar, ShoppingCart, CheckCircle2, Home, ChefHat, Archive } from 'lucide-react';
 import { View, InventoryItem, ShoppingItem } from '../types';
 import KuraLogo from './KuraLogo';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface NavigationProps {
  currentView: View;
@@ -11,6 +12,7 @@ interface NavigationProps {
 }
 
 export function TopBar({ currentView, onViewChange, inventory = [], shoppingList = [] }: NavigationProps) {
+ const { t } = useLanguage();
  const [isOpen, setIsOpen] = useState(false);
  
  if (currentView === 'scanner' || currentView === 'auth') return null;
@@ -71,7 +73,7 @@ export function TopBar({ currentView, onViewChange, inventory = [], shoppingList
  {expiringItems.length > 0 ? (
  <div className="space-y-2">
  <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-amber-600 flex items-center gap-1">
- <Calendar className="w-3 h-3" /> Expiring Soon
+ <Calendar className="w-3 h-3" /> {t('Expiring Soon')}
  </span>
  <div className="space-y-1 pl-4">
  {expiringItems.slice(0, 4).map(item => (

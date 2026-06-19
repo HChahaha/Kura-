@@ -5,6 +5,7 @@ import { InventoryItem } from '../types';
 import { getRemainingRecipes, incrementRecipes } from '../lib/limits';
 import { auth, db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface RecipesProps {
  inventory: InventoryItem[];
@@ -25,6 +26,7 @@ export default function Recipes({
  onDeleteRecipe,
  onSuggestRecipe
 }: RecipesProps) {
+ const { t, language } = useLanguage();
  const [searchQuery, setSearchQuery] = useState('');
  const [activeCategory, setActiveCategory] = useState("All");
  const [remainingRecipes, setRemainingRecipes] = useState<number>(3);
@@ -65,7 +67,7 @@ export default function Recipes({
  const res = await fetch('/api/generate-recipe', {
  method: 'POST',
  headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ inventory })
+ body: JSON.stringify({ inventory, language })
  });
 
  if (!res.ok) {
@@ -181,7 +183,7 @@ export default function Recipes({
  >
  <div>
  <span className="text-[9px] font-extrabold uppercase tracking-[0.25em] text-zinc-400 mb-1 block">Notebook Draft</span>
- <h2 className="text-sm font-bold tracking-tight mb-1 text-white">What I wanna cook</h2>
+ <h2 className="text-sm font-bold tracking-tight mb-1 text-white">{t('What I wanna cook')}</h2>
  <p className="text-[11px] text-zinc-300 font-normal leading-relaxed">
  Record recipes. Link, screenshot or type; AI auto-fills.
  </p>
@@ -212,7 +214,7 @@ export default function Recipes({
  {remainingRecipes} Left today
  </span>
  </div>
- <h2 className={`text-sm font-bold tracking-tight mb-1 ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-[#18181b]'}`}>Give me an idea</h2>
+ <h2 className={`text-sm font-bold tracking-tight mb-1 ${remainingRecipes <= 0 ? 'text-zinc-400' : 'text-[#18181b]'}`}>{t('Give me an idea')}</h2>
  <p className={`text-[11px] font-normal leading-relaxed ${remainingRecipes <= 0 ? 'text-zinc-500' : 'text-zinc-650'}`}>
  {isAiLoading
  ? 'Consulting kitchen experts...'

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Search, Plus, Trash2, Calendar, Store, DollarSign, Archive, CheckCircle2, Circle, AlertCircle, ArrowUpRight, ChevronDown, ChevronUp, Tag, Apple, Carrot, Beef, Fish, Wheat, Milk, Flame, Package, Home, Tags, Crown, Camera, Receipt, CheckSquare } from 'lucide-react';
 import { ShoppingItem, PurchaseRecord, View, InventoryItem } from '../types';
 import { getNormalShelfLife, suggestCategory } from '../lib/imageUtils';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ShoppingListProps {
  shoppingList: ShoppingItem[];
@@ -449,6 +450,35 @@ const getFlyerDeals = () => {
  return ALL_DEALS[region] || ALL_DEALS['Canada'];
 };
 
+const parseWeightPer100g = (priceStr: string, qtyStr: string) => {
+  const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+  if (isNaN(price) || !qtyStr) return null;
+
+  const match = qtyStr.match(/([\d.]+)\s*(g|kg|lbs?|oz|ml|l)\b/i);
+  if (!match) return null;
+
+  const amount = parseFloat(match[1]);
+  const unit = match[2].toLowerCase();
+  
+  if (isNaN(amount) || amount <= 0) return null;
+
+  let weightInGrams = 0;
+  if (unit === 'g' || unit === 'ml') weightInGrams = amount;
+  else if (unit === 'kg' || unit === 'l') weightInGrams = amount * 1000;
+  else if (unit === 'lb' || unit === 'lbs') weightInGrams = amount * 453.6;
+  else if (unit === 'oz') weightInGrams = amount * 28.35;
+
+  if (weightInGrams <= 0) return null;
+
+  const pricePer100 = (price / weightInGrams) * 100;
+  const unitLabel = (unit === 'ml' || unit === 'l') ? '100ml' : '100g';
+
+  return {
+    pricePer100: pricePer100.toFixed(2),
+    unitLabel
+  };
+};
+
 export default function ShoppingList({
  shoppingList,
  purchaseHistory,
@@ -462,6 +492,7 @@ export default function ShoppingList({
  onAddToInventory,
  onViewChange
 }: ShoppingListProps) {
+ const { t } = useLanguage();
  const [newItemName, setNewItemName] = useState('');
  const [newItemAmount, setNewItemAmount] = useState('1');
  const [newItemPrice, setNewItemPrice] = useState('');
@@ -804,7 +835,7 @@ export default function ShoppingList({
  price: price.trim() ? (price.startsWith('$') ? price.trim() : `$${price.trim()}`) : 'Unspecified',
  storeName: storeName.trim() || 'Unspecified Store',
  purchaseDate: purchaseDate,
- quantityBought: `${quantityBought.trim() || '1'}${unitBought}`
+ quantityBought: quantityBought.trim() || '1'
  };
 
  // 1. Add purchase reference record
@@ -817,7 +848,7 @@ export default function ShoppingList({
  storeName: record.storeName, 
  price: record.price, 
  purchaseDate: record.purchaseDate, 
- quantityBought: record.quantityBought 
+ quantityBought: record.quantityBought
  });
  }
 
@@ -860,7 +891,7 @@ export default function ShoppingList({
  className="pb-32 px-6 pt-24 max-w-lg mx-auto font-sans"
  >
  <header className="mb-12">
- <h2 className="text-4xl font-light mb-2 text-ink-black">To Buy & References</h2>
+ <h2 className="text-4xl font-light mb-2 text-ink-black">{t('To-Buy List')} & References</h2>
  <p className="text-zinc-400 text-sm font-medium">
  Manage your replenishment lists and check past prices & stores.
  </p>
@@ -1186,10 +1217,8 @@ export default function ShoppingList({
                   <div className="min-w-0 pr-2 flex-1 text-left" style={{ minWidth: 0 }}>
                     <span className="font-bold text-ink-black text-sm block mb-0.5 truncate">{item.name}</span>
                     
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 truncate mt-0.5 h-5">
-                      {item.category && <span>{item.category}</span>}
-                      {item.category && item.amount && <span>&middot;</span>}
-                      {item.amount && <span>x{item.amount}</span>}
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 mt-0.5 min-w-0">
+                      {item.amount && <span className="shrink-0">x{item.amount}</span>}
                       
                       {(() => {
                         const lowestPast = getLowestHistoricalPrice(item.name);
@@ -1200,7 +1229,7 @@ export default function ShoppingList({
                                 e.stopPropagation();
                                 setSelectedHistoryItemName(item.name);
                               }}
-                              className="ml-1 px-1.5 py-0.5 bg-[#eef5f1] text-[#2c8c2c] border border-[#d3e8d8] rounded-full flex items-center gap-1 hover:bg-[#d8eedf] transition-colors"
+                              className="ml-1 shrink-0 px-1.5 py-0.5 bg-[#eef5f1] text-[#2c8c2c] border border-[#d3e8d8] rounded-full flex items-center gap-1 hover:bg-[#d8eedf] transition-colors"
                             >
                               <span>👑</span>
                               <span className="font-bold">${(lowestPast.price)?.toString().replace('$', '')}</span>
@@ -1208,7 +1237,7 @@ export default function ShoppingList({
                           );
                         } else if (item.price) {
                           return (
-                            <div className="ml-1 px-1.5 py-[1px] bg-zinc-100 text-zinc-500 border border-transparent rounded-full flex items-center">
+                            <div className="ml-1 shrink-0 px-1.5 py-[1px] bg-zinc-100 text-zinc-500 border border-transparent rounded-full flex items-center">
                               <span className="font-medium">~${(item.price).toString().replace('$', '')} est.</span>
                             </div>
                           );
@@ -1322,54 +1351,15 @@ export default function ShoppingList({
  </div>
  <div>
  <label className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2 flex items-center gap-1.5">
- <Archive className="w-3 h-3 text-zinc-400" /> Quantity
+ <Archive className="w-3 h-3 text-zinc-400" /> Quantity / Size
  </label>
- <div className="flex flex-col gap-2">
  <div className="flex bg-zinc-50 border border-zinc-200 rounded-[12px] overflow-visible focus-within:bg-white focus-within:border-zinc-400 transition-all relative">
  <input 
- type="number" 
+ type="text" 
+ placeholder="e.g. 1lbs, 450g, 2kg, 2"
  value={quantityBought}
  onChange={(e) => setQuantityBought(e.target.value)}
  className="w-full border-0 bg-transparent px-4 py-3 text-sm focus:ring-0 font-medium text-ink-black focus:outline-none" 
- />
- <div 
- className="px-4 flex items-center gap-2 cursor-pointer hover:bg-zinc-100 border-l border-zinc-200 relative"
- onClick={() => setIsUnitOpen(!isUnitOpen)}
- >
- <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 font-sans">{unitBought}</span>
- <ChevronDown className={`w-3 h-3 text-zinc-300 transition-transform ${isUnitOpen ? 'rotate-180' : ''}`} />
- 
- <AnimatePresence>
- {isUnitOpen && (
- <motion.div 
- initial={{ opacity: 0, y: 10 }}
- animate={{ opacity: 1, y: 0 }}
- exit={{ opacity: 0, y: 10 }}
- className="absolute top-full right-0 mt-2 bg-white border border-zinc-100 rounded-xl shadow-xl z-20 py-2 min-w-[100px]"
- >
- {UNITS.map(u => (
- <button 
- key={u}
- type="button"
- onClick={(e) => { e.stopPropagation(); setUnitBought(u); setIsUnitOpen(false); }}
- className="w-full px-4 py-2 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-ink-black hover:bg-zinc-50 font-sans"
- >
- {u}
- </button>
- ))}
- </motion.div>
- )}
- </AnimatePresence>
- </div>
- </div>
- <input
- type="range"
- min="1"
- max={(unitBought === 'g' || unitBought === 'ml') ? 2000 : 50}
- step={(unitBought === 'g' || unitBought === 'ml') ? 10 : 1}
- value={Number(quantityBought) || 1}
- onChange={(e) => setQuantityBought(e.target.value)}
- className="w-full h-2 mb-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
  />
  </div>
  </div>
@@ -1491,15 +1481,17 @@ export default function ShoppingList({
  />
  </div>
  <div>
- <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2">Quantity</label>
+ <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2">Quantity / Size</label>
  <input 
- type="text" 
+ type="text"
+ placeholder="e.g. 1lbs, 450g, 2kg, 2" 
  value={editingHistoryItem.quantityBought}
  onChange={(e) => setEditingHistoryItem({...editingHistoryItem, quantityBought: e.target.value})}
  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
  />
  </div>
  </div>
+ <div className="grid grid-cols-2 gap-4">
  <div>
  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block mb-2">Date</label>
  <input 
@@ -1508,6 +1500,7 @@ export default function ShoppingList({
  onChange={(e) => setEditingHistoryItem({...editingHistoryItem, purchaseDate: e.target.value})}
  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-[12px] text-sm focus:outline-none focus:bg-white focus:border-zinc-400 transition-all font-medium text-ink-black"
  />
+ </div>
  </div>
  </div>
 
@@ -1582,6 +1575,8 @@ export default function ShoppingList({
                    const saveAmt = getNum(highest.price) - getNum(lowest.price);
                    const saveText = saveAmt > 0 ? `Save $${saveAmt.toFixed(2)} vs highest` : '';
 
+                   const upInfo = parseWeightPer100g(lowest.price, lowest.quantityBought || '');
+
                    return (
                      <div className="bg-[#f0fdf4] border border-[#d3e8d8] rounded-[16px] p-5 mb-6 shadow-sm">
                        <div className="flex justify-between items-start mb-2">
@@ -1592,15 +1587,34 @@ export default function ShoppingList({
                            </div>
                          )}
                        </div>
-                       <div className="flex items-center gap-3">
-                         <span className="text-3xl leading-none">👑</span>
-                         <div>
-                           <div className="text-3xl font-semibold text-[#115e11] leading-none mb-1">
+                       <div>
+                         <div className="flex items-center gap-3 mb-1">
+                           <div className="text-3xl font-semibold text-[#115e11] leading-none flex items-center gap-2">
                              ${(lowest.price).replace('$', '')}
+                             {upInfo && (
+                               <div className="px-2 py-0.5 bg-white text-[#2c8c2c] text-[12px] font-bold border border-[#d3e8d8] rounded-full inline-flex tracking-tight">
+                                 ${upInfo.pricePer100}/{upInfo.unitLabel}
+                               </div>
+                             )}
                            </div>
-                           <div className="text-[13px] font-medium text-[#2c8c2c]">
-                             {lowest.storeName} &middot; {new Date(lowest.purchaseDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
-                           </div>
+                         </div>
+                         <div className="text-[13px] font-medium text-[#2c8c2c] flex items-center flex-wrap gap-1">
+                           {lowest.storeName} &middot; {new Date(lowest.purchaseDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
+                           {upInfo ? (
+                             <> &middot; {lowest.quantityBought}</>
+                           ) : (
+                             <div className="w-full mt-2">
+                               <button 
+                                 onClick={() => {
+                                   setSelectedHistoryItemName(null);
+                                   setEditingHistoryItem(lowest);
+                                 }}
+                                 className="px-2.5 py-1 bg-white border border-[#d3e8d8] rounded-[6px] text-[#2c8c2c] text-xs font-semibold hover:bg-[#ebf8f0] transition-colors inline-block"
+                               >
+                                 Weight not recorded <span className="underline decoration-[#2c8c2c]/40 underline-offset-2">&mdash; add it to see $/100g</span>
+                               </button>
+                             </div>
+                           )}
                          </div>
                        </div>
                      </div>
@@ -1614,11 +1628,13 @@ export default function ShoppingList({
                     const isLowest = record.id === selectedHistoryData.lowestRecordId;
                     const isReceipt = (record as any).source === 'Receipt scan' || record.storeName.toLowerCase().includes('scan') || (!record.hasOwnProperty('source') && record.purchaseDate);
 
+                    const upInfoDesc = parseWeightPer100g(record.price, record.quantityBought || '');
+
                     return (
                       <div key={record.id} className="relative">
                         <div className={`absolute -left-[30.5px] top-4 w-[13px] h-[13px] rounded-full border-2 border-white shadow-sm ${isLowest ? 'bg-[#2c8c2c]' : 'bg-transparent border-[2px] !border-zinc-300'}`} />
 
-                        <div className={`p-4 rounded-[16px] border ${isLowest ? 'bg-[#f5fbf7] border-[#d3e8d8]' : 'bg-[#fafafa] border-zinc-150'} flex justify-between items-center transition-colors`}>
+                        <div className={`p-4 rounded-[16px] border ${isLowest ? 'bg-[#f5fbf7] border-[#d3e8d8]' : 'bg-[#fafafa] border-zinc-150'} flex justify-between items-start transition-colors`}>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="text-[15px] font-medium text-ink-black">{record.storeName}</h4>
@@ -1626,6 +1642,9 @@ export default function ShoppingList({
                             <div className="flex items-center gap-1.5 text-[12px] text-zinc-500 font-medium whitespace-nowrap">
                               {isReceipt ? <Receipt className="w-4 h-4 opacity-70" /> : <CheckSquare className="w-4 h-4 opacity-70" />}
                               <span>{isReceipt ? 'Receipt scan' : 'Manual entry'}</span>
+                              {upInfoDesc && record.quantityBought && (
+                                <><span>&middot;</span><span>{record.quantityBought}</span></>
+                              )}
                             </div>
                             {isLowest && (
                               <div className="mt-2 text-[10px] font-bold text-[#2c8c2c] bg-[#eef5f1] inline-flex px-2 py-0.5 rounded border border-[#d3e8d8]">
@@ -1640,6 +1659,11 @@ export default function ShoppingList({
                             <div className="text-[12px] font-medium text-zinc-500">
                               {new Date(record.purchaseDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
                             </div>
+                            {upInfoDesc && (
+                              <div className="text-[12px] font-bold text-[#2c8c2c] mt-1.5">
+                                ${upInfoDesc.pricePer100}/{upInfoDesc.unitLabel}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1875,7 +1899,7 @@ export default function ShoppingList({
  <span className="shrink-0 text-lg leading-none">🎖️</span>
  <div className="space-y-1.5 flex-1">
  <p className="font-semibold text-indigo-950 text-xs">
- Your Personal Lowest Past Price
+ {t('Best past price')}
  </p>
  <div className="flex items-baseline gap-2 flex-wrap">
  <span className="text-xl font-black text-indigo-750 ">

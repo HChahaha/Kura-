@@ -5,6 +5,7 @@ import { format, addDays } from 'date-fns';
 import { getRemainingScans, incrementScans } from '../lib/limits';
 import { auth } from '../lib/firebase';
 import { CustomCalendar } from '../components/CustomCalendar';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const FOOD_SHELF_LIFE: Record<string, number> = {
   'MILK': 7,
@@ -35,6 +36,7 @@ interface ScannerProps {
 }
 
 export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
+  const { t, language } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -166,6 +168,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         setScanStatus("Parsing receipt lines with Gemini AI... ⏳");
         const formData = new FormData();
         formData.append('file', file, file.name);
+        formData.append('language', language);
 
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -203,7 +206,8 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             imageData: base64Data,
-            mimeType: mimeType
+            mimeType: mimeType,
+            language: language
           })
         });
 
@@ -310,7 +314,8 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageData: base64Data,
-          mimeType: 'image/jpeg'
+          mimeType: 'image/jpeg',
+          language: language
         })
       });
 
@@ -543,7 +548,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
             }`}
           >
             <Camera className="w-4 h-4" />
-            Live Camera
+            {t('Scan Receipt')}
           </button>
           <button
             onClick={() => setScanTab('album')}
@@ -554,7 +559,7 @@ export default function Scanner({ onViewChange, onItemsAdded }: ScannerProps) {
             }`}
           >
             <Upload className="w-4 h-4" />
-            Upload from Album
+            {t('Upload from Albums')}
           </button>
         </div>
 
